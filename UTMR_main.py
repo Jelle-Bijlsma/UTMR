@@ -5,7 +5,7 @@ import numpy as np
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtGui import QPixmap
 
-import gui3
+from GUI_teach import gui3
 
 
 # date 22-05 21:19

@@ -5,30 +5,42 @@ import numpy as np
 from PyQt5 import QtCore, QtGui, QtWidgets
 from PyQt5.QtGui import QPixmap
 
-from GUI_teach import gui3
+from QT_Gui import gui_full
+
+# why did i write this function if it is not used?
+# too bad!
+from functions.auxillary import getallfiles
+
+# the whole thing is just existing within this class.
 
 
-# date 22-05 21:19
-
-
-class Build_Up(gui3.Ui_MainWindow):
+class Build_Up(gui_full.Ui_MainWindow):
     def __init__(self):
         super().__init__()
+        # video
+        self.timer = QtCore.QTimer()
+        self.timer.timeout.connect(self.nextFrameSlot)
+        self.base_image = cv2.imread("./data/png/IM_0011.png", 0)
+        self.initial_figure = cv2.imread("./data/png/IM_0011.png", 0)
 
     # variablesq
 
     def setupUi2(self):
+        # this is setting up the GUI more. I couldnt find't / couldn't be bothetered to set these options within
+        # QT designer.
         self.stackedWidget.setCurrentIndex(0)
-        self.label_logo_uni.setPixmap((QtGui.QPixmap("./UTlogo.png")))
+        self.label_logo_uni.setPixmap((QtGui.QPixmap("./QT_Gui/images/UTlogo.png")))
         self.label_logo_uni.setScaledContents(True)
         self.slider_brightness.setMinimum(-255)
         self.slider_brightness.setMaximum(255)
         self.slider_brightness.setValue(0)
         self.slider_brightness.valueChanged.connect(self.sliderchange)
 
+        # a lot of it is linking, using the .connect() option. Here an 'action' gets linked to a function,
+        # such as 'valueChanged' of the brightness slider to the function 'sliderchange'
 
         # initialize image
-        self.mr_image.setPixmap(QtGui.QPixmap("./dicom/png/IM_0011.png"))
+        self.mr_image.setPixmap(QtGui.QPixmap("./data/png/IM_0011.png"))
         self.mr_image.setScaledContents(True)
 
         # button return
@@ -36,28 +48,23 @@ class Build_Up(gui3.Ui_MainWindow):
         self.button_play.clicked.connect(self.playB)
         self.button_pause.clicked.connect(self.pauseB)
 
-        # video
-        self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.nextFrameSlot)
-        self.base_image = cv2.imread("./dicom/png/IM_0011.png", 0)
-        self.initial_figure = cv2.imread("./dicom/png/IM_0011.png", 0)
 
-        # menu
-        self.actionMain.triggered.connect(lambda: self.gotopage(0))
-        self.actionImage_processing.triggered.connect(lambda: self.gotopage(1))
-        self.actionDicom_Edit.triggered.connect(lambda: self.gotopage(2))
 
-        self.button_2dicom.clicked.connect(lambda: self.gotopage(2))
-        self.button_2editor.clicked.connect(lambda: self.gotopage(1))
+        # menu buttons
+        self.actionMain.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(0))
+        self.actionImage_processing.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(1))
+        self.actionDicom_Edit.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(2))
+
+        self.button_2dicom.clicked.connect(lambda: self.stackedWidget.setCurrentIndex(2))
+        self.button_2editor.clicked.connect(lambda: self.stackedWidget.setCurrentIndex(1))
 
         self.pb_convert.clicked.connect(self.convert)
         self.pb_browse_save.clicked.connect(lambda: self.filebrowse(1))
         self.pb_browse_dcm.clicked.connect(lambda: self.filebrowse(2))
 
-    def gotopage(self, pagenum):
-        self.stackedWidget.setCurrentIndex(pagenum)
-
     def filebrowse(self, dcmsave):
+        # this could definitely be done different, too bad!
+        #
         path = str(QtWidgets.QFileDialog.getExistingDirectory(MainWindow, 'select folder'))
         if dcmsave == 1:
             self.lineEdit_save.setText(path)
@@ -74,24 +81,13 @@ class Build_Up(gui3.Ui_MainWindow):
             for element in filelist:
                 self.txtbox_dcmcont.append(element)
 
-    def getallfiles(self,path):
-        filelist = os.listdir(path)
-        filelist.sort()
-        img_array= []
-        for element in filelist:
-            #print(element)
-            fp = path + element
-            img = cv2.imread(fp)
-            h, w, l = img.shape
-            # notice the reversal of order ...
-            size = (w, h)
-            img_array.append(img)
-        return
+
 
     def convert(self):
         fps = self.spinbox_fps.value()
         if fps == 0:
             pass
+        # why is this here again? too bad
         savepath = self.lineEdit_save.text()
         dcmpath = self.lineEdit_dicom.text()
 
@@ -131,15 +127,19 @@ class Build_Up(gui3.Ui_MainWindow):
         self.mr_image.setPixmap(pmap)
 
     def sliderchange(self):
+        # this is bad and should be edited
         rtrn_img = self.brightness_check()
         self.update_figure(rtrn_img)
 
     # buttons
     def playB(self):
-        self.vc = cv2.VideoCapture("video.avi")
+        # the play button in the videoplayer
+        # works sort of
+        self.vc = cv2.VideoCapture("./data/avi/video.avi")
         self.timer.start(100)
 
     def pauseB(self):
+        # pause button, doesnt work!
         self.centralwidget2 = QtWidgets.QWidget()
         # self.centralwidget2.setObjectName("centralwidget2")
         # self.mr_image2 = QtWidgets.QLabel(self.centralwidget2)
@@ -149,6 +149,7 @@ class Build_Up(gui3.Ui_MainWindow):
         # MainWindow.setCentralWidget(self.centralwidget)
 
     def resetB(self):
+        # yeaah doesnt work
         self.slider_brightness.setValue(0)
         self.update_figure(self.initial_figure)
 

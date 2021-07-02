@@ -1,0 +1,53 @@
+GUI based application is event-driven. This means that:
+stuff happens based on events. Each widget can emit a 'signal', i.e.
+WtWidgets.QlineEdit()
+can support many signals such as:
+WtWidgets.QlineEdit.editingFinished()
+These can then be picked and sent to other functions with the connect
+WtWidgets.QlineEdit.editingFinished.connect()
+
+## radio button
+only one can be selected, but they have to be grouped.
+
+## textedit
+text_edit = QtWidgets.QTextEdit(window)
+text_edit.setPlaceholderText("Enter some text here")
+
+#interesting class example
+https://www.tutorialspoint.com/pyqt/pyqt_drag_and_drop.htm
+
+
+#interesting
+https://www.tutorialspoint.com/pyqt/pyqt_brushstyle_constants.htm   <<drawing stuff
+https://zetcode.com/gui/pyqt5/menustoolbars/                        <<icons and task/toolbars
+
+
+>>>>Reimplementing event handlers. By rewriting methods of the parent class, specific functionality can be achieved.
+Pressing the escape key to exit for example:
+    def keyPressEvent(self, e):
+        if e.key() == Qt.Key_Escape:
+            self.close()
+
+Or getting the mouse position iwthin a label:
+    def mouseMoveEvent(self, e):
+        x = e.x()
+        y = e.y()
+
+        text = f'x: {x},  y: {y}'
+        self.label.setText(text)
+
+The e is the event object; it contains data about the event that was triggered; in our case, a mouse move event.
+ With the x() and y() methods we determine the x and y coordinates of the mouse pointer.
+
+ Each interaction with your application — whether a press of a key, click of a mouse, or mouse movement —\
+ generates an event which is placed on the event queue.
+
+
+ >>>Event sender. Whenever there is a signal being sent, it is tracked who sent it. If two buttons link to the same
+ function without reference, calling 'self.sender()' method will return the label of who sent the last signal.
+
+If you require something out of the ordinary, you can design a custom widget.
+https://zetcode.com/gui/pyqt5/customwidgets/
+
+>>painint, maybe later:
+https://zetcode.com/gui/pyqt5/painting/

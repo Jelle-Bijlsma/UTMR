@@ -7,9 +7,13 @@ from PyQt5.QtGui import QPixmap
 
 from QT_Gui import gui_full
 
+# used only once
+
+
 # why did i write this function if it is not used?
 # too bad!
-from functions.auxillary import getallfiles
+
+import functions.auxillary
 
 # the whole thing is just existing within this class.
 
@@ -22,6 +26,9 @@ class Build_Up(gui_full.Ui_MainWindow):
         self.timer.timeout.connect(self.nextFrameSlot)
         self.base_image = cv2.imread("./data/png/IM_0011.png", 0)
         self.initial_figure = cv2.imread("./data/png/IM_0011.png", 0)
+
+        self.a = PopupInput()
+        self.b = PopupWaring()
 
     # variablesq
 
@@ -59,37 +66,73 @@ class Build_Up(gui_full.Ui_MainWindow):
         self.button_2editor.clicked.connect(lambda: self.stackedWidget.setCurrentIndex(1))
 
         self.pb_convert.clicked.connect(self.convert)
-        self.pb_browse_save.clicked.connect(lambda: self.filebrowse(1))
-        self.pb_browse_dcm.clicked.connect(lambda: self.filebrowse(2))
+        #self.pb_browse_save.clicked.connect(self.filebrowse)
+        self.pb_browse_dcm.clicked.connect(self.filebrowse)
 
-    def filebrowse(self, dcmsave):
+    def filebrowse(self):
         # this could definitely be done different, too bad!
         #
         path = str(QtWidgets.QFileDialog.getExistingDirectory(MainWindow, 'select folder'))
-        if dcmsave == 1:
-            self.lineEdit_save.setText(path)
-            filelist = os.listdir(path)
-            filelist.sort()
-            self.save_contains.clear()
-            for element in filelist:
-                self.save_contains.append(element)
-        else:
+        try:
             self.lineEdit_dicom.setText(path)
             filelist = os.listdir(path)
             filelist.sort()
             self.txtbox_dcmcont.clear()
             for element in filelist:
                 self.txtbox_dcmcont.append(element)
-
-
+        except:
+            self.txtbox_cmd.append("folder selection aborted")
 
     def convert(self):
+        self.txtbox_cmd.append("starting conversion")
         fps = self.spinbox_fps.value()
-        if fps == 0:
-            pass
-        # why is this here again? too bad
-        savepath = self.lineEdit_save.text()
+        project_name = self.lineEdit_save.text()
         dcmpath = self.lineEdit_dicom.text()
+        if fps <= 0:
+            msg = QtWidgets.QMessageBox()
+            msg.setText("FPS Cant be zero!")
+            msg.setIcon(QtWidgets.QMessageBox.Warning)
+            x = msg.exec_()
+            self.txtbox_cmd.append("FPS cant be set, exiting")
+            return
+        self.txtbox_cmd.append("FPS =" + str(self.spinbox_fps.value()))
+
+        if project_name == "" or dcmpath == "":
+            msg = QtWidgets.QMessageBox()
+            msg.setText("Project name & dcm folder cant be empty")
+            msg.setIcon(QtWidgets.QMessageBox.Warning)
+            x = msg.exec_()
+            self.txtbox_cmd.append("Empty project name or dcm folder, exiting")
+            return
+        else:
+            projectpath = "./data/png/" + project_name
+            if os.path.exists(projectpath):
+                msg = QtWidgets.QMessageBox()
+                msg.setText("possibility of overwrite, continue?")
+                msg.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
+                x = msg.exec_()
+                bresult = (msg.clickedButton().text())
+                if bresult != "&Yes":
+                    self.txtbox_cmd.append("overwrite detected, exiting")
+                    return
+            else:
+                os.mkdir(projectpath)
+
+        # here we start calling functions
+
+        filelist = os.listdir(dcmpath)
+        filelist.sort()
+        a = functions.auxillary.dicom2png(filelist,dcmpath +"/",project_name)
+        if a < 2:
+            self.txtbox_cmd.append("Less than two images processed")
+            self.txtbox_cmd.append("Are you sure the right folder is selected?")
+            self.txtbox_cmd.append("Exiting")
+            return
+        #
+
+        functions.auxillary.png2avi(projectpath + "/",fps)
+
+
 
     def nextFrameSlot(self):
         rval, frame = self.vc.read()
@@ -153,6 +196,26 @@ class Build_Up(gui_full.Ui_MainWindow):
         self.slider_brightness.setValue(0)
         self.update_figure(self.initial_figure)
 
+
+class PopupInput(QtWidgets.QWidget):
+    def __init__(self):
+        super().__init__()
+
+    def showdialog(self):
+        text, ok = QtWidgets.QInputDialog.getText(self, 'input dialog', 'Is this ok?')
+        if ok:
+            return text
+        else:
+            return False
+
+class PopupWaring(QtWidgets.QDialog):
+    def __init__(self):
+        super().__init__()
+        self.setWindowTitle("not that word")
+        QtWidgets.QPushButton("a button")
+
+    def showme(self):
+        self.show()
 
 if __name__ == "__main__":
     # chad no argument vs virgin sys.argv

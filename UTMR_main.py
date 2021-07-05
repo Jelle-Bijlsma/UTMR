@@ -24,43 +24,104 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.threadpool = QtCore.QThreadPool()
         print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
 
-
-    # variablesq
-
     def setup_ui2(self):
         # this is setting up the GUI more. I couldn't find / couldn't be bothered to set these options within
         # QT designer.
+
+        # general
         self.stackedWidget.setCurrentIndex(0)
         self.label_logo_uni.setPixmap((QtGui.QPixmap("./QT_Gui/images/UTlogo.png")))
         self.label_logo_uni.setScaledContents(True)
+
+        # home page
+        self.button_2dicom.clicked.connect(lambda: self.stackedWidget.setCurrentIndex(2))
+        self.button_2editor.clicked.connect(lambda: self.stackedWidget.setCurrentIndex(1))
+
+        # video editor
         self.slider_brightness.setMinimum(-255)
         self.slider_brightness.setMaximum(255)
         self.slider_brightness.setValue(0)
         self.slider_brightness.valueChanged.connect(self.sliderchange)
 
-        # a lot of it is linking, using the .connect() option. Here an 'action' gets linked to a function,
-        # such as 'valueChanged' of the brightness slider to the function 'sliderchange'
-
-        # initialize image
         self.mr_image.setPixmap(QtGui.QPixmap("./data/png/IM_0011.png"))
         self.mr_image.setScaledContents(True)
 
-        # button return
         self.button_reset.clicked.connect(self.reset_button)
         self.button_play.clicked.connect(self.play_button)
         self.button_pause.clicked.connect(self.pause_button)
+
+        # dicom page
+        self.pb_convert.clicked.connect(self.convert)
+        self.pb_browse_dcm.clicked.connect(self.filebrowse)
+        self.pb_reset_terminal.clicked.connect(self.txtbox_cmd.clear)
 
         # menu buttons
         self.actionMain.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(0))
         self.actionImage_processing.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(1))
         self.actionDicom_Edit.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(2))
 
-        self.button_2dicom.clicked.connect(lambda: self.stackedWidget.setCurrentIndex(2))
-        self.button_2editor.clicked.connect(lambda: self.stackedWidget.setCurrentIndex(1))
+    # $$$$$$$$  functions relating to video editor
+    def next_frame(self):
+        rval, frame = self.vc.read()
+        # if there are no more frames,movie is stopped.
+        if not rval:
+            self.pause_button()
+            return
 
-        self.pb_convert.clicked.connect(self.convert)
-        self.pb_browse_dcm.clicked.connect(self.filebrowse)
+        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
+        frame = frame[58:428, 143:513]
+        self.base_image = frame
+        frame = self.brightness_check(frame)
+        self.update_figure(frame)
 
+    def brightness_check(self, img=None):
+        if img is None:
+            img = self.base_image
+
+        b_val = self.slider_brightness.value()
+        b_val = int(b_val)  # cast to make sure
+
+        if b_val > 0:
+            newim = np.where((255 - img) < b_val, 255, img + b_val)
+        else:
+            newim = np.where((img + b_val) < 0, 0, img + b_val)
+            newim = newim.astype('uint8')
+        return newim
+
+    def update_figure(self, img):
+        # slice and dice
+        w, h = img.shape
+        qim = QtGui.QImage(img.data.tobytes(), h, w, h, QtGui.QImage.Format_Indexed8)
+        pmap = QtGui.QPixmap.fromImage(qim)
+        self.mr_image.setPixmap(pmap)
+
+    def sliderchange(self):
+        # this is bad and should be edited
+        rtrn_img = self.brightness_check()
+        self.update_figure(rtrn_img)
+
+    def play_button(self):
+        # the play button in the videoplayer
+        # works sort of
+        self.vc = cv2.VideoCapture("./data/avi/video.avi")
+        self.timer.start(100)
+
+    def pause_button(self):
+        # pause button, doesnt work!
+        self.centralwidget2 = QtWidgets.QWidget()
+        # self.centralwidget2.setObjectName("centralwidget2")
+        # self.mr_image2 = QtWidgets.QLabel(self.centralwidget2)
+        # self.mr_image2.setGeometry(QtCore.QRect(130, 100, 591, 731))
+        # MainWindow.setCentralWidget(self.centralwidget2)
+        # time.sleep(3)
+        # MainWindow.setCentralWidget(self.centralwidget)
+
+    def reset_button(self):
+        # yeaah doesnt work
+        self.slider_brightness.setValue(0)
+        self.update_figure(self.initial_figure)
+
+    # $$$$$$ functions related to dicom manager
     def filebrowse(self):
         # this could definitely be done different, too bad!
         #
@@ -77,9 +138,13 @@ class BuildUp(gui_full.Ui_MainWindow):
 
     def convert(self):
         self.txtbox_cmd.append("starting conversion")
+        # get variables
         fps = self.spinbox_fps.value()
         project_name = self.lineEdit_save.text()
         dcmpath = self.lineEdit_dicom.text()
+        savename = project_name + ".avi"
+
+        # check conditions
         if fps <= 0:
             msg = QtWidgets.QMessageBox()
             msg.setText("FPS Cant be zero!")
@@ -115,102 +180,28 @@ class BuildUp(gui_full.Ui_MainWindow):
                     os.mkdir("./data")
                     os.mkdir(projectpath)
 
-        # here we start calling functions
+        # initialize worker thread
         dcm2pngworker = functions.classes.Worker1()
         filelist = os.listdir(dcmpath)
         filelist.sort()
+
+        # dirty fix, too bad!
+        dcmstatus = False
         path = dcmpath + "/"
         self.threadpool.start(lambda a=filelist, b=path, c=project_name: dcm2pngworker.dicom2png(a, b, c))
         dcm2pngworker.signals.progress.connect(lambda prgz: self.txtbox_cmd.append("Converting image " + str(prgz)))
+        dcm2pngworker.signals.finished.connect(lambda: self.txtbox_cmd.append("image conversion done"))
 
+        videosave = "./data/video"
+        videopath = videosave + "/" + savename
+        if not os.path.exists(videosave):
+            os.mkdir(videosave)
 
-        # this could use some multithreading
-        # self.thread = QtCore.QThread()
-        # self.worker = functions.classes.Worker1()
-        # self.worker.moveToThread(self.thread)
-        # # now comes the difficult part
-        # path = dcmpath + "/"
-        # self.thread.started.connect(lambda a=filelist, b=path, c=project_name: self.worker.dicom2png(a, b, c))
-        # self.worker.finished.connect(self.thread.quit)
-        # self.worker.finished.connect(self.worker.deleteLater)
-        # self.thread.finished.connect(self.thread.deleteLater)
-        # self.worker.progress.connect(lambda prgz: self.txtbox_cmd.append("doin image" + str(prgz)))
-        #
-        # self.thread.start()
+        dcm2pngworker.signals.finished.connect(lambda: self.threadpool.start(
+                                                   lambda a="./data/png/" + project_name + "/", b=fps, c=videopath:
+                                                   dcm2pngworker.png2avi(a, b, c)))
 
-
-
-        #a = functions.auxillary.dicom2png(filelist, dcmpath + "/", project_name)
-        # if a < 2:
-        #     self.txtbox_cmd.append("Less than two images processed")
-        #     self.txtbox_cmd.append("Are you sure the right folder is selected?")
-        #     self.txtbox_cmd.append("Exiting")
-        #     return
-        # #
-
-        functions.auxillary.png2avi(projectpath + "/", fps)
-
-    def next_frame(self):
-        rval, frame = self.vc.read()
-        # if there are no more frames,movie is stopped.
-        if not rval:
-            self.pause_button()
-            return
-
-        frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
-        frame = frame[58:428, 143:513]
-        self.base_image = frame
-        frame = self.brightness_check(frame)
-        self.update_figure(frame)
-
-    # edits brightness based on current slider position
-    def brightness_check(self, img=None):
-        if img is None:
-            img = self.base_image
-
-        b_val = self.slider_brightness.value()
-        b_val = int(b_val)  # cast to make sure
-
-        if b_val > 0:
-            newim = np.where((255 - img) < b_val, 255, img + b_val)
-        else:
-            newim = np.where((img + b_val) < 0, 0, img + b_val)
-            newim = newim.astype('uint8')
-        return newim
-
-    def update_figure(self, img):
-        # slice and dice
-        w, h = img.shape
-        qim = QtGui.QImage(img.data.tobytes(), h, w, h, QtGui.QImage.Format_Indexed8)
-        pmap = QtGui.QPixmap.fromImage(qim)
-        self.mr_image.setPixmap(pmap)
-
-    def sliderchange(self):
-        # this is bad and should be edited
-        rtrn_img = self.brightness_check()
-        self.update_figure(rtrn_img)
-
-    # buttons
-    def play_button(self):
-        # the play button in the videoplayer
-        # works sort of
-        self.vc = cv2.VideoCapture("./data/avi/video.avi")
-        self.timer.start(100)
-
-    def pause_button(self):
-        # pause button, doesnt work!
-        self.centralwidget2 = QtWidgets.QWidget()
-        # self.centralwidget2.setObjectName("centralwidget2")
-        # self.mr_image2 = QtWidgets.QLabel(self.centralwidget2)
-        # self.mr_image2.setGeometry(QtCore.QRect(130, 100, 591, 731))
-        # MainWindow.setCentralWidget(self.centralwidget2)
-        # time.sleep(3)
-        # MainWindow.setCentralWidget(self.centralwidget)
-
-    def reset_button(self):
-        # yeaah doesnt work
-        self.slider_brightness.setValue(0)
-        self.update_figure(self.initial_figure)
+        dcm2pngworker.signals.videodone.connect(lambda: self.txtbox_cmd.append("video conversion done"))
 
 
 if __name__ == "__main__":

@@ -16,3 +16,15 @@ UTMR_main.py is the main event handler. It imports:
 and `QT_Gui` which is the file 'built' in QTdesigner. It serves
 as the template for the GUI.
 
+## known issues
+Menu buttons are suboptimal
+
+video editor:
+* crash when no image is loaded
+* 90% of the buttons do not work
+* 10% of the buttons work poorly
+
+## could be fixed:
+dicom editor:
+
+* You can input an empty folder in dicom path and get no warning.

@@ -8,26 +8,28 @@ import cv2
 # here live all the additional classes I'm using
 
 
-class PopupInput(QtWidgets.QWidget):
-    def __init__(self):
-        super().__init__()
-
-    def showdialog(self):
-        text, ok = QtWidgets.QInputDialog.getText(self, 'input dialog', 'Is this ok?')
-        if ok:
-            return text
-        else:
-            return False
-
-
-class PopupWaring(QtWidgets.QDialog):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("not that word")
-        QtWidgets.QPushButton("a button")
-
-    def showme(self):
-        self.show()
+# class PopupInput(QtWidgets.QWidget):
+#     def __init__(self):
+#         super().__init__()
+#
+#     def showdialog(self):
+#         text, ok = QtWidgets.QInputDialog.getText(self, 'input dialog', 'Is this ok?')
+#         if ok:
+#             return text
+#         else:
+#             return False
+#
+#
+# class PopupWaring(QtWidgets.QDialog):
+#     def __init__(self,text):
+#         super().__init__()
+#         self.setWindowTitle("watch out kid")
+#         a = QtWidgets.QLabel()
+#         a.setText("this thing aint on autopilot son ")
+#         QtWidgets.QPushButton("a button")
+#
+#     def showme(self):
+#         self.show()
 
 
 class Workersignals(QtCore.QObject):
@@ -73,7 +75,6 @@ class Worker1(QtCore.QRunnable):
         print("u are here" + path)
         print(filelist)
         # check if list is nonempty
-        # save location is still wrong!
         if filelist:
             for element in filelist:
                 # print(element)

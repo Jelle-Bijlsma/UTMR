@@ -2,7 +2,7 @@ import os
 import cv2
 from pydicom import dcmread
 import matplotlib.pyplot as plt
-
+from PyQt5 import QtWidgets
 
 def png2avi(path,fps):
     # them ting be needing PNG
@@ -46,3 +46,19 @@ def dicom2png(filelist,path,project_name):
         plt.savefig(savestring)
 
     return a
+
+
+def checkifpng(filelist):
+    a = 0
+    for element in filelist:
+        if ".png" in element:
+            a += 1
+    return a
+
+
+def popupmsg(text,iswhat):
+    msg = QtWidgets.QMessageBox()
+    msg.setText(text)
+    if iswhat == "warning":
+        msg.setIcon(QtWidgets.QMessageBox.Warning)
+    msg.exec_()

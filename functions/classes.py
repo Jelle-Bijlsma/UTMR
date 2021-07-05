@@ -27,12 +27,19 @@ class PopupWaring(QtWidgets.QDialog):
         self.show()
 
 
-# this should provide multithreading options for the dicom2png
-class Worker1(QtCore.QObject):
-
+class Workersignals(QtCore.QObject):
     finished = QtCore.pyqtSignal()
     progress = QtCore.pyqtSignal(int)
 
+
+# this should provide multithreading options for the dicom2png
+class Worker1(QtCore.QRunnable):
+    def __init__(self):
+        super().__init__()
+        self.signals = Workersignals()
+
+
+    @QtCore.pyqtSlot()
     def dicom2png(self, filelist, path, project_name):
         print(filelist)
         print(path)
@@ -51,7 +58,8 @@ class Worker1(QtCore.QObject):
             plt.imshow(array, cmap="gray")
             savestring = "./data/png/" + project_name + "/" + element + ".png"
             plt.savefig(savestring)
-            self.progress.emit(a)
-        self.finished.emit()
+            self.signals.progress.emit(a)
+            plt.close()
+        self.signals.finished.emit()
 
         return

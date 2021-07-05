@@ -21,6 +21,9 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.a = functions.classes.PopupInput()
         self.b = functions.classes.PopupWaring()
 
+        self.threadpool = QtCore.QThreadPool()
+        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
+
 
     # variablesq
 
@@ -113,22 +116,29 @@ class BuildUp(gui_full.Ui_MainWindow):
                     os.mkdir(projectpath)
 
         # here we start calling functions
-
+        dcm2pngworker = functions.classes.Worker1()
         filelist = os.listdir(dcmpath)
         filelist.sort()
-        # this could use some multithreading
-        self.thread = QtCore.QThread()
-        self.worker = functions.classes.Worker1()
-        self.worker.moveToThread(self.thread)
-        # now comes the difficult part
         path = dcmpath + "/"
-        self.thread.started.connect(lambda a=filelist, b=path, c=project_name: self.worker.dicom2png(a, b, c))
-        self.worker.finished.connect(self.thread.quit)
-        self.worker.finished.connect(self.worker.deleteLater)
-        self.thread.finished.connect(self.thread.deleteLater)
-        self.worker.progress.connect(lambda prgz: self.txtbox_cmd.append("doin image" + str(prgz)))
+        self.threadpool.start(lambda a=filelist, b=path, c=project_name: dcm2pngworker.dicom2png(a, b, c))
+        dcm2pngworker.signals.progress.connect(lambda prgz: self.txtbox_cmd.append("Converting image " + str(prgz)))
 
-        self.thread.start()
+
+        # this could use some multithreading
+        # self.thread = QtCore.QThread()
+        # self.worker = functions.classes.Worker1()
+        # self.worker.moveToThread(self.thread)
+        # # now comes the difficult part
+        # path = dcmpath + "/"
+        # self.thread.started.connect(lambda a=filelist, b=path, c=project_name: self.worker.dicom2png(a, b, c))
+        # self.worker.finished.connect(self.thread.quit)
+        # self.worker.finished.connect(self.worker.deleteLater)
+        # self.thread.finished.connect(self.thread.deleteLater)
+        # self.worker.progress.connect(lambda prgz: self.txtbox_cmd.append("doin image" + str(prgz)))
+        #
+        # self.thread.start()
+
+
 
         #a = functions.auxillary.dicom2png(filelist, dcmpath + "/", project_name)
         # if a < 2:

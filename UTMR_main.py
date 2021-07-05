@@ -3,37 +3,29 @@ import os
 import cv2
 import numpy as np
 from PyQt5 import QtCore, QtGui, QtWidgets
-from PyQt5.QtGui import QPixmap
-
 from QT_Gui import gui_full
-
-# used only once
-
-
-# why did i write this function if it is not used?
-# too bad!
-
 import functions.auxillary
+import functions.classes
+
 
 # the whole thing is just existing within this class.
-
-
-class Build_Up(gui_full.Ui_MainWindow):
+class BuildUp(gui_full.Ui_MainWindow):
     def __init__(self):
         super().__init__()
         # video
         self.timer = QtCore.QTimer()
-        self.timer.timeout.connect(self.nextFrameSlot)
+        self.timer.timeout.connect(self.next_frame)
         self.base_image = cv2.imread("./data/png/IM_0011.png", 0)
         self.initial_figure = cv2.imread("./data/png/IM_0011.png", 0)
 
-        self.a = PopupInput()
-        self.b = PopupWaring()
+        self.a = functions.classes.PopupInput()
+        self.b = functions.classes.PopupWaring()
+
 
     # variablesq
 
-    def setupUi2(self):
-        # this is setting up the GUI more. I couldnt find't / couldn't be bothetered to set these options within
+    def setup_ui2(self):
+        # this is setting up the GUI more. I couldn't find / couldn't be bothered to set these options within
         # QT designer.
         self.stackedWidget.setCurrentIndex(0)
         self.label_logo_uni.setPixmap((QtGui.QPixmap("./QT_Gui/images/UTlogo.png")))
@@ -51,11 +43,9 @@ class Build_Up(gui_full.Ui_MainWindow):
         self.mr_image.setScaledContents(True)
 
         # button return
-        self.button_reset.clicked.connect(self.resetB)
-        self.button_play.clicked.connect(self.playB)
-        self.button_pause.clicked.connect(self.pauseB)
-
-
+        self.button_reset.clicked.connect(self.reset_button)
+        self.button_play.clicked.connect(self.play_button)
+        self.button_pause.clicked.connect(self.pause_button)
 
         # menu buttons
         self.actionMain.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(0))
@@ -66,7 +56,6 @@ class Build_Up(gui_full.Ui_MainWindow):
         self.button_2editor.clicked.connect(lambda: self.stackedWidget.setCurrentIndex(1))
 
         self.pb_convert.clicked.connect(self.convert)
-        #self.pb_browse_save.clicked.connect(self.filebrowse)
         self.pb_browse_dcm.clicked.connect(self.filebrowse)
 
     def filebrowse(self):
@@ -92,7 +81,7 @@ class Build_Up(gui_full.Ui_MainWindow):
             msg = QtWidgets.QMessageBox()
             msg.setText("FPS Cant be zero!")
             msg.setIcon(QtWidgets.QMessageBox.Warning)
-            x = msg.exec_()
+            msg.exec_()
             self.txtbox_cmd.append("FPS cant be set, exiting")
             return
         self.txtbox_cmd.append("FPS =" + str(self.spinbox_fps.value()))
@@ -101,7 +90,7 @@ class Build_Up(gui_full.Ui_MainWindow):
             msg = QtWidgets.QMessageBox()
             msg.setText("Project name & dcm folder cant be empty")
             msg.setIcon(QtWidgets.QMessageBox.Warning)
-            x = msg.exec_()
+            msg.exec_()
             self.txtbox_cmd.append("Empty project name or dcm folder, exiting")
             return
         else:
@@ -110,35 +99,52 @@ class Build_Up(gui_full.Ui_MainWindow):
                 msg = QtWidgets.QMessageBox()
                 msg.setText("possibility of overwrite, continue?")
                 msg.setStandardButtons(QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No)
-                x = msg.exec_()
+                msg.exec_()
                 bresult = (msg.clickedButton().text())
                 if bresult != "&Yes":
                     self.txtbox_cmd.append("overwrite detected, exiting")
                     return
             else:
-                os.mkdir(projectpath)
+                # you know this can be done easier
+                if os.path.exists("./data"):
+                    os.mkdir(projectpath)
+                else:
+                    os.mkdir("./data")
+                    os.mkdir(projectpath)
 
         # here we start calling functions
 
         filelist = os.listdir(dcmpath)
         filelist.sort()
-        a = functions.auxillary.dicom2png(filelist,dcmpath +"/",project_name)
-        if a < 2:
-            self.txtbox_cmd.append("Less than two images processed")
-            self.txtbox_cmd.append("Are you sure the right folder is selected?")
-            self.txtbox_cmd.append("Exiting")
-            return
-        #
+        # this could use some multithreading
+        self.thread = QtCore.QThread()
+        self.worker = functions.classes.Worker1()
+        self.worker.moveToThread(self.thread)
+        # now comes the difficult part
+        path = dcmpath + "/"
+        self.thread.started.connect(lambda a=filelist, b=path, c=project_name: self.worker.dicom2png(a, b, c))
+        self.worker.finished.connect(self.thread.quit)
+        self.worker.finished.connect(self.worker.deleteLater)
+        self.thread.finished.connect(self.thread.deleteLater)
+        self.worker.progress.connect(lambda prgz: self.txtbox_cmd.append("doin image" + str(prgz)))
 
-        functions.auxillary.png2avi(projectpath + "/",fps)
+        self.thread.start()
 
+        #a = functions.auxillary.dicom2png(filelist, dcmpath + "/", project_name)
+        # if a < 2:
+        #     self.txtbox_cmd.append("Less than two images processed")
+        #     self.txtbox_cmd.append("Are you sure the right folder is selected?")
+        #     self.txtbox_cmd.append("Exiting")
+        #     return
+        # #
 
+        functions.auxillary.png2avi(projectpath + "/", fps)
 
-    def nextFrameSlot(self):
+    def next_frame(self):
         rval, frame = self.vc.read()
         # if there are no more frames,movie is stopped.
         if not rval:
-            self.pauseB()
+            self.pause_button()
             return
 
         frame = cv2.cvtColor(frame, cv2.COLOR_RGB2GRAY)
@@ -166,7 +172,7 @@ class Build_Up(gui_full.Ui_MainWindow):
         # slice and dice
         w, h = img.shape
         qim = QtGui.QImage(img.data.tobytes(), h, w, h, QtGui.QImage.Format_Indexed8)
-        pmap = QPixmap.fromImage(qim)
+        pmap = QtGui.QPixmap.fromImage(qim)
         self.mr_image.setPixmap(pmap)
 
     def sliderchange(self):
@@ -175,13 +181,13 @@ class Build_Up(gui_full.Ui_MainWindow):
         self.update_figure(rtrn_img)
 
     # buttons
-    def playB(self):
+    def play_button(self):
         # the play button in the videoplayer
         # works sort of
         self.vc = cv2.VideoCapture("./data/avi/video.avi")
         self.timer.start(100)
 
-    def pauseB(self):
+    def pause_button(self):
         # pause button, doesnt work!
         self.centralwidget2 = QtWidgets.QWidget()
         # self.centralwidget2.setObjectName("centralwidget2")
@@ -191,41 +197,21 @@ class Build_Up(gui_full.Ui_MainWindow):
         # time.sleep(3)
         # MainWindow.setCentralWidget(self.centralwidget)
 
-    def resetB(self):
+    def reset_button(self):
         # yeaah doesnt work
         self.slider_brightness.setValue(0)
         self.update_figure(self.initial_figure)
 
-
-class PopupInput(QtWidgets.QWidget):
-    def __init__(self):
-        super().__init__()
-
-    def showdialog(self):
-        text, ok = QtWidgets.QInputDialog.getText(self, 'input dialog', 'Is this ok?')
-        if ok:
-            return text
-        else:
-            return False
-
-class PopupWaring(QtWidgets.QDialog):
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("not that word")
-        QtWidgets.QPushButton("a button")
-
-    def showme(self):
-        self.show()
 
 if __name__ == "__main__":
     # chad no argument vs virgin sys.argv
     app = QtWidgets.QApplication([])
     MainWindow = QtWidgets.QMainWindow()
     # class creation
-    ui = Build_Up()
+    ui = BuildUp()
     # create an instance of Ui_MainWindow
     # fill in the instance into the setup function ?
     ui.setupUi(MainWindow)
-    ui.setupUi2()
+    ui.setup_ui2()
     MainWindow.show()
     sys.exit(app.exec_())

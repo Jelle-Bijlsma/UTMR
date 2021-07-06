@@ -17,12 +17,7 @@ class BuildUp(gui_full.Ui_MainWindow):
         # video
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.next_frame)
-        self.imarray = []
-        self.qpixlist = []
         self.imlist = []
-        self.framenums = 0
-        self.currentframe = 0
-
         self.CurMov = functions.classes.MovieClass()
 
         self.base_image = cv2.imread("./QT_Gui/images/baseimage.png", 0)
@@ -51,8 +46,8 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.pb_load_movie.clicked.connect(self.filebrowse_png)
         self.progress_bar.setMinimum(0)
         self.progress_bar.valueChanged.connect(self.framechange)
-        # self.slider_brightness.valueChanged.connect(self.sliderchange)
-        # self.button_reset.clicked.connect(self.reset_button)
+        self.slider_brightness.valueChanged.connect(self.sliderchange)
+        self.pb_reset.clicked.connect(self.reset_button)
         self.pb_play.clicked.connect(self.play_button)
         self.pb_pause.clicked.connect(lambda: self.timer.stop())
 
@@ -109,12 +104,16 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.CurMov.currentframe = slv
         self.mr_image.setPixmap(self.CurMov.return_frame())
 
-    # def sliderchange(self):
-    #     slv = self.slider_brightness.value()
-
+    def sliderchange(self):
+        slv = self.slider_brightness.value()
+        self.CurMov.brightness = slv
+        self.mr_image.setPixmap(self.CurMov.return_frame())
 
     def reset_button(self):
-        pass
+        self.timer.stop()
+        self.CurMov.currentframe = 0
+        self.slider_brightness.setValue(0)
+        self.progress_bar.setValue(0)
 
     # $$$$$$ functions related to dicom manager
     def filebrowse_dcm(self):

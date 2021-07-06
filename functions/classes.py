@@ -34,6 +34,8 @@ import functions.auxillary
 
 
 class Workersignals(QtCore.QObject):
+    # This could be redundant due to an error I made previously.
+    # Could incorporate in the Worker1?
     starting = QtCore.pyqtSignal()
     finished = QtCore.pyqtSignal()
     progress = QtCore.pyqtSignal(int)
@@ -126,6 +128,7 @@ class MovieClass:
         self.currentframe = 0
         self.maxframes = 0
         self.framelist = []
+        self.brightness = 0
 
     def create_frameclass(self, imlist):
         self.framelist.clear()
@@ -140,5 +143,10 @@ class MovieClass:
             self.currentframe += 1
 
     def return_frame(self):
+        # temp is a reference to the object in the list, so modifications to temp are propageted
+        # meaning, after all the frames have been adjusted, no more calculations are done.
         temp = self.framelist[self.currentframe]
+        if self.brightness != temp.brightness:
+            temp.change_brightness(self.brightness)
         return temp.qpix
+

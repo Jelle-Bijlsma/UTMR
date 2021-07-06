@@ -5,6 +5,11 @@ import matplotlib.pyplot as plt
 import os
 import cv2
 import functions.auxillary
+import matplotlib
+from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
+from matplotlib.figure import Figure
+
+matplotlib.use("Qt5Agg")
 
 # here live all the additional classes I'm using
 
@@ -105,6 +110,10 @@ class FrameClass:
         self.qpix = functions.auxillary.cv2qpix(self.ogframe)
         self.brightness = 0
         self.newframe = frame
+        self.histogram = None
+        self.histogramqpix = None
+        self.hashistogram = False
+        self.once = 0
 
     def change_qpix(self, frame):
         # this is weird, import function soon?
@@ -120,7 +129,13 @@ class FrameClass:
             self.newframe = np.where((self.ogframe + bval) < 0, 0, self.ogframe + bval)
             self.newframe = self.newframe.astype('uint8')
 
+        self.hashistogram = False
         self.change_qpix(self.newframe)
+
+    def calc_hist(self):
+        l, b = self.newframe.shape
+        img2 = np.reshape(self.newframe, l * b)
+        self.histogram = np.log10(np.bincount(img2, minlength=255)+1)
 
 
 class MovieClass:
@@ -148,5 +163,13 @@ class MovieClass:
         temp = self.framelist[self.currentframe]
         if self.brightness != temp.brightness:
             temp.change_brightness(self.brightness)
-        return temp.qpix
+        if temp.hashistogram is False:
+            temp.calc_hist()
+        return temp.qpix, temp.histogram
 
+
+class MplCanvas(FigureCanvasQTAgg):
+    def __init__(self, parent=None, width=5, height=4, dpi=100):
+        fig = Figure(figsize=(width, height), dpi=dpi)
+        self.axes = fig.add_subplot(111)
+        super().__init__(fig)

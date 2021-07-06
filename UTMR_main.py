@@ -3,12 +3,13 @@ import os
 import cv2
 
 # import numpy as np
+import pyqtgraph
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from QT_Gui import gui_full
 import functions.auxillary
 import functions.classes
-
+import pyqtgraph as pg
 
 # the whole thing is just existing within this class.
 class BuildUp(gui_full.Ui_MainWindow):
@@ -24,6 +25,9 @@ class BuildUp(gui_full.Ui_MainWindow):
         # multi threading
         self.threadpool = QtCore.QThreadPool()
         print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
+        self.histogram = []
+
+
 
     def setup_ui2(self):
         # this is setting up the GUI more. I couldn't find / couldn't be bothered to set these options within
@@ -31,6 +35,7 @@ class BuildUp(gui_full.Ui_MainWindow):
         # general, which for some reason doesnt work when put in __init__
         self.mr_image.setPixmap(QtGui.QPixmap("./QT_Gui/images/baseimage.png"))
         self.mr_image.setScaledContents(True)
+        self.label_6.setScaledContents(True)
         self.stackedWidget.setCurrentIndex(0)
         self.label_logo_uni.setPixmap((QtGui.QPixmap("./QT_Gui/images/UTlogo.png")))
         self.label_logo_uni.setScaledContents(True)
@@ -63,6 +68,28 @@ class BuildUp(gui_full.Ui_MainWindow):
 
         # test
         self.filebrowse_png(True)
+        #histogram time
+        self.histogram = pg.PlotWidget(self.editor_page)
+        self.histogram.setAspectLocked(False)
+        hispost = (self.label_6.pos())
+        hissize = self.label_6.size()
+        self.histogram.setGeometry(QtCore.QRect(hispost.x(), hispost.y(), hissize.width(), hissize.height()))
+        self.histogramx = list(range(0, 255))
+        print(self.histogram.pixelSize())
+        #self.asd = pyqtgraph.GraphicsLayout
+        #self.asd.addViewBox(self.histogram,None,None,1,1)
+        """
+
+    In Designer, create a QGraphicsView widget (“Graphics View” under the “Display Widgets” category).
+
+    Right-click on the QGraphicsView and select “Promote To…”.
+
+    Under “Promoted class name”, enter the class name you wish to use (“PlotWidget”, “GraphicsLayoutWidget”, etc).
+
+    Under “Header file”, enter “pyqtgraph”.
+
+    Click “Add”, then click “Promote”.
+"""
 
     # $$$$$$$$  functions relating to video editor
     def filebrowse_png(self, test=False):
@@ -95,19 +122,37 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.timer.start(100)
 
     def next_frame(self):
-        self.CurMov.next_frame()
-        self.mr_image.setPixmap(self.CurMov.return_frame())
-        self.progress_bar.setValue(self.CurMov.currentframe)
+        # regarding main image
+        self.CurMov.next_frame()  # MovieClass method to go to the next frame index
+        qpix, histogram = self.CurMov.return_frame()
+        self.mr_image.setPixmap(qpix)  # set the main image to the current Frame
+        self.progress_bar.setValue(self.CurMov.currentframe)  # edit the progress bar
+        # regarding histogram
+        # hour = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        # temperature = [30, 32, 34, 32, 33, 31, 29, 32, 35, 45]
+        # # plot data: x, y values
+        self.bargraph = pg.BarGraphItem(x=self.histogramx, height=histogram, width =5, brush = 'g')
+        #self.histogram.plot(hour, temperature)
+        self.histogram.clear()
+        self.histogram.addItem(self.bargraph)
+
+        # This error is due to variable size of the bincount method.........................
+        # IndexError: index 1 is out of bounds for axis 0 with size 1
+        # Traceback (most recent call last):
+
+
 
     def framechange(self):
+        qpix, histogram = self.CurMov.return_frame()
         slv = self.progress_bar.value()
         self.CurMov.currentframe = slv
-        self.mr_image.setPixmap(self.CurMov.return_frame())
+        self.mr_image.setPixmap(qpix)
 
     def sliderchange(self):
+        qpix, histogram = self.CurMov.return_frame()
         slv = self.slider_brightness.value()
         self.CurMov.brightness = slv
-        self.mr_image.setPixmap(self.CurMov.return_frame())
+        self.mr_image.setPixmap(qpix)
 
     def reset_button(self):
         self.timer.stop()

@@ -17,6 +17,8 @@ and `QT_Gui` which is the file 'built' in QTdesigner. It serves
 as the template for the GUI.
 
 ## known issues
+If you dont have 4k resolution tough luck
+
 Menu buttons are suboptimal
 
 video editor:

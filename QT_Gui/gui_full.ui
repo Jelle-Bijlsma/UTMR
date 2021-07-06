@@ -24,7 +24,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>2</number>
+     <number>1</number>
     </property>
     <widget class="QWidget" name="homepage">
      <widget class="QLabel" name="label_logo_uni">
@@ -974,7 +974,7 @@
        <bool>true</bool>
       </property>
      </widget>
-     <widget class="QPushButton" name="button_reset">
+     <widget class="QPushButton" name="pb_reset">
       <property name="geometry">
        <rect>
         <x>550</x>
@@ -987,7 +987,7 @@
        <string>Reset</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="button_pause">
+     <widget class="QPushButton" name="pb_pause">
       <property name="geometry">
        <rect>
         <x>360</x>
@@ -1000,7 +1000,7 @@
        <string>Pause</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="button_play">
+     <widget class="QPushButton" name="pb_play">
       <property name="geometry">
        <rect>
         <x>150</x>
@@ -1011,6 +1011,9 @@
       </property>
       <property name="text">
        <string>Play</string>
+      </property>
+      <property name="icon">
+       <iconset theme="MediaPlay"/>
       </property>
      </widget>
      <widget class="QScrollBar" name="progress_bar">
@@ -3243,7 +3246,7 @@
        <string>slider6</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="button_reset_2">
+     <widget class="QPushButton" name="pb_load_movie">
       <property name="geometry">
        <rect>
         <x>510</x>
@@ -3256,7 +3259,7 @@
        <string>Load new file</string>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEdit_5">
+     <widget class="QLineEdit" name="lineEdit_importpath">
       <property name="geometry">
        <rect>
         <x>280</x>

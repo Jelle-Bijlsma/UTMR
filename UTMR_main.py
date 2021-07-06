@@ -23,6 +23,8 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.framenums = 0
         self.currentframe = 0
 
+        self.CurMov = functions.classes.MovieClass()
+
         self.base_image = cv2.imread("./QT_Gui/images/baseimage.png", 0)
         # multi threading
         self.threadpool = QtCore.QThreadPool()
@@ -47,11 +49,12 @@ class BuildUp(gui_full.Ui_MainWindow):
 
         # video editor
         self.pb_load_movie.clicked.connect(self.filebrowse_png)
-
+        self.progress_bar.setMinimum(0)
+        self.progress_bar.valueChanged.connect(self.framechange)
         # self.slider_brightness.valueChanged.connect(self.sliderchange)
         # self.button_reset.clicked.connect(self.reset_button)
         self.pb_play.clicked.connect(self.play_button)
-        self.pb_pause.clicked.connect(self.pause_button)
+        self.pb_pause.clicked.connect(lambda: self.timer.stop())
 
         # dicom page
         self.pb_convert.clicked.connect(self.convert)
@@ -85,58 +88,33 @@ class BuildUp(gui_full.Ui_MainWindow):
             return
         self.pb_play.setEnabled(True)
         self.pb_play.setToolTip("")
-        # create imlist which hosts all the png images as np arrays for ez calculations.
-        self.imlist = functions.auxillary.loadin(filelist, path)
-        # you can index from zero to framenums. ez as can be
-        self.framenums = len(self.imlist)-1
-        # create qpixlist which hosts all the imlist in qpix formate
-        self.qpixlist = functions.auxillary.qpixmaker(self.imlist)
-        # set the initial photo
-        self.mr_image.setPixmap(self.qpixlist[0])
+
+        # create temp list of all images.
+        imlist = functions.auxillary.loadin(filelist, path)
+        self.CurMov.create_frameclass(imlist)
+        self.progress_bar.setMaximum(self.CurMov.maxframes)
 
     def play_button(self):
-        # the play button in the videoplayer
-        # works sort of
         if self.timer.isActive():
             return
         self.timer.start(100)
 
     def next_frame(self):
-        if self.currentframe == self.framenums:
-            self.currentframe = 0
-        else:
-            self.currentframe += 1
+        self.CurMov.next_frame()
+        self.mr_image.setPixmap(self.CurMov.return_frame())
+        self.progress_bar.setValue(self.CurMov.currentframe)
 
-        self.mr_image.setPixmap(self.qpixlist[self.currentframe])
+    def framechange(self):
+        slv = self.progress_bar.value()
+        self.CurMov.currentframe = slv
+        self.mr_image.setPixmap(self.CurMov.return_frame())
 
-    def pause_button(self):
-        self.timer.stop()
-
-    #
-    # def brightness_check(self, img=None):
-    #     if img is None:
-    #         img = self.base_image
-    #
-    #     b_val = self.slider_brightness.value()
-    #     b_val = int(b_val)  # cast to make sure
-    #
-    #     if b_val > 0:
-    #         newim = np.where((255 - img) < b_val, 255, img + b_val)
-    #     else:
-    #         newim = np.where((img + b_val) < 0, 0, img + b_val)
-    #         newim = newim.astype('uint8')
-    #     return newim
-    #
-    #
     # def sliderchange(self):
-    #     # this is bad and should be edited
-    #     rtrn_img = self.brightness_check()
-    #     self.update_figure(rtrn_img)
+    #     slv = self.slider_brightness.value()
 
-    # def reset_button(self):
-    #     # yeaah doesnt work
-    #     self.slider_brightness.setValue(0)
-    #     self.update_figure(self.base_image)
+
+    def reset_button(self):
+        pass
 
     # $$$$$$ functions related to dicom manager
     def filebrowse_dcm(self):

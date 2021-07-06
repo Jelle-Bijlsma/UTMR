@@ -45,6 +45,6 @@ video editor:
 * 90% of the buttons do not work
 
 ## could be fixed:
-dicom editor:
+dicom editor:d
 
 * You can input an empty folder in dicom path and get no warning.

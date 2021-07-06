@@ -4,7 +4,7 @@ from pydicom import dcmread
 import matplotlib.pyplot as plt
 import os
 import cv2
-# import auxillary
+import functions.auxillary
 
 # here live all the additional classes I'm using
 
@@ -34,6 +34,8 @@ import cv2
 
 
 class Workersignals(QtCore.QObject):
+    # This could be redundant due to an error I made previously.
+    # Could incorporate in the Worker1?
     starting = QtCore.pyqtSignal()
     finished = QtCore.pyqtSignal()
     progress = QtCore.pyqtSignal(int)
@@ -97,40 +99,54 @@ class Worker1(QtCore.QRunnable):
         return
 
 
-# class FrameClass:
-#     def __init__(self, frame: np.array):
-#         self.ogframe = frame  # original and immutable
-#         self.qpix = auxillary.cv2qpix(self.ogframe)
-#         self.brightness = 0
-#         self.newframe = frame
-#
-#     def change_qpix(self, frame):
-#         # this is weird, import function soon?
-#         self.qpix = auxillary.cv2qpix(frame)
-#
-#     def change_brightness(self, bval):
-#         self.brightness = bval
-#         bval = int(bval)  # cast to be sure
-#
-#         if bval > 0:
-#             self.newframe = np.where((255 - self.ogframe) < bval, 255, self.ogframe + bval)
-#         else:
-#             self.newframe = np.where((self.ogframe + bval) < 0, 0, self.ogframe + bval)
-#             self.newframe = self.newframe.astype('uint8')
-#
-#         self.change_qpix(self.newframe)
-#
-#
-# class MovieClass:
-#     def __init__(self):
-#         self.currentframe = 0
-#         self.maxframes = 0
-#
-#     def create_frameclass(self,imlist):
-#
-#
-#     def next_frame(self):
-#         if self.currentframe == self.maxframes:
-#             self.currentframe = 0
-#         else:
-#             self.currentframe += 1
+class FrameClass:
+    def __init__(self, frame: np.array):
+        self.ogframe = frame  # original and immutable
+        self.qpix = functions.auxillary.cv2qpix(self.ogframe)
+        self.brightness = 0
+        self.newframe = frame
+
+    def change_qpix(self, frame):
+        # this is weird, import function soon?
+        self.qpix = functions.auxillary.cv2qpix(frame)
+
+    def change_brightness(self, bval):
+        self.brightness = bval
+        bval = int(bval)  # cast to be sure
+
+        if bval > 0:
+            self.newframe = np.where((255 - self.ogframe) < bval, 255, self.ogframe + bval)
+        else:
+            self.newframe = np.where((self.ogframe + bval) < 0, 0, self.ogframe + bval)
+            self.newframe = self.newframe.astype('uint8')
+
+        self.change_qpix(self.newframe)
+
+
+class MovieClass:
+    def __init__(self):
+        self.currentframe = 0
+        self.maxframes = 0
+        self.framelist = []
+        self.brightness = 0
+
+    def create_frameclass(self, imlist):
+        self.framelist.clear()
+        for element in imlist:
+            self.framelist.append(FrameClass(element))
+        self.maxframes = len(imlist)-1
+
+    def next_frame(self):
+        if self.currentframe == self.maxframes:
+            self.currentframe = 0
+        else:
+            self.currentframe += 1
+
+    def return_frame(self):
+        # temp is a reference to the object in the list, so modifications to temp are propageted
+        # meaning, after all the frames have been adjusted, no more calculations are done.
+        temp = self.framelist[self.currentframe]
+        if self.brightness != temp.brightness:
+            temp.change_brightness(self.brightness)
+        return temp.qpix
+

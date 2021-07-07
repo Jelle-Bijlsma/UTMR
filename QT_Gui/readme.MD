@@ -7,3 +7,12 @@ use terminal command
 
 or just run ./scrip.sh
 which is the command on line 6. 
+
+## using exotic classes in Qt designer
+In Designer
+* create a QGraphicsView widget
+(“Graphics View” under the “Display Widgets” category)
+* Right-click on the QGraphicsView and select “Promote To…”.
+* under “Promoted class name”, enter the class name you wish to use (“PlotWidget”, “GraphicsLayoutWidget”, etc).
+* Under “Header file”, enter “pyqtgraph”.
+* Click “Add”, then click “Promote”

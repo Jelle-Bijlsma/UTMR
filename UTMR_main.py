@@ -3,7 +3,6 @@ import os
 import cv2
 
 # import numpy as np
-import pyqtgraph
 
 from PyQt5 import QtCore, QtGui, QtWidgets
 from QT_Gui import gui_full
@@ -11,34 +10,34 @@ import functions.auxillary
 import functions.classes
 import pyqtgraph as pg
 
+
 # the whole thing is just existing within this class.
 class BuildUp(gui_full.Ui_MainWindow):
     def __init__(self):
         super().__init__()
-        # video
+        # initialize timer video player. timer is started in the self.play_button
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.next_frame)
-        self.imlist = []
-        self.CurMov = functions.classes.MovieClass()
 
-        self.base_image = cv2.imread("./QT_Gui/images/baseimage.png", 0)
-        # multi threading
         self.threadpool = QtCore.QThreadPool()
         print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
-        self.histogram = []
 
-
+        # start initializing variables
+        self.CurMov = functions.classes.MovieClass()
+        self.histogramx = list(range(0, 255))  # the x-range of the histogram
+        self.bargraph = pg.BarGraphItem()  # the histogram widget inside plotwidget (which is called self.histogram)
 
     def setup_ui2(self):
-        # this is setting up the GUI more. I couldn't find / couldn't be bothered to set these options within
-        # QT designer.
-        # general, which for some reason doesnt work when put in __init__
+        # this is setting up the GUI more. More convenient here than in QT designer.
+        # For some reason doesnt work when put in __init__
+
+        # load pictures in
         self.mr_image.setPixmap(QtGui.QPixmap("./QT_Gui/images/baseimage.png"))
         self.mr_image.setScaledContents(True)
-        self.label_6.setScaledContents(True)
-        self.stackedWidget.setCurrentIndex(0)
         self.label_logo_uni.setPixmap((QtGui.QPixmap("./QT_Gui/images/UTlogo.png")))
         self.label_logo_uni.setScaledContents(True)
+
+        self.stackedWidget.setCurrentIndex(0)
         self.slider_brightness.setMinimum(-255)
         self.slider_brightness.setMaximum(255)
         self.slider_brightness.setValue(0)
@@ -68,28 +67,6 @@ class BuildUp(gui_full.Ui_MainWindow):
 
         # test
         self.filebrowse_png(True)
-        #histogram time
-        self.histogram = pg.PlotWidget(self.editor_page)
-        self.histogram.setAspectLocked(False)
-        hispost = (self.label_6.pos())
-        hissize = self.label_6.size()
-        self.histogram.setGeometry(QtCore.QRect(hispost.x(), hispost.y(), hissize.width(), hissize.height()))
-        self.histogramx = list(range(0, 255))
-        print(self.histogram.pixelSize())
-        #self.asd = pyqtgraph.GraphicsLayout
-        #self.asd.addViewBox(self.histogram,None,None,1,1)
-        """
-
-    In Designer, create a QGraphicsView widget (“Graphics View” under the “Display Widgets” category).
-
-    Right-click on the QGraphicsView and select “Promote To…”.
-
-    Under “Promoted class name”, enter the class name you wish to use (“PlotWidget”, “GraphicsLayoutWidget”, etc).
-
-    Under “Header file”, enter “pyqtgraph”.
-
-    Click “Add”, then click “Promote”.
-"""
 
     # $$$$$$$$  functions relating to video editor
     def filebrowse_png(self, test=False):
@@ -99,7 +76,7 @@ class BuildUp(gui_full.Ui_MainWindow):
             path = str(a.getExistingDirectory(MainWindow, 'select folder with pngs'))
         else:
             path = "./data/png/correct_video"
-        # get existing directory never uses the final '/' so you have to manually input it.
+        # 'get existing directory' never uses the final '/' so you have to manually input it.
         self.lineEdit_importpath.setText(path)
         filelist = os.listdir(path)
         filelist.sort()
@@ -115,50 +92,54 @@ class BuildUp(gui_full.Ui_MainWindow):
         imlist = functions.auxillary.loadin(filelist, path)
         self.CurMov.create_frameclass(imlist)
         self.progress_bar.setMaximum(self.CurMov.maxframes)
+        self.update_all_things()
+
+    def next_frame(self):
+        # called when the timer says it is time for the next frame
+        self.CurMov.next_frame()  # MovieClass method to go to the next frame index
+        self.update_all_things()
+
+    def update_all_things(self):
+        # called whenever the main screen should be updated
+        # if statement to reduce calculation costs
+        if self.progress_bar.value() != self.CurMov.currentframe:
+            self.progress_bar.setValue(self.CurMov.currentframe)  # edit the progress bar
+        qpix, histogram = self.CurMov.return_frame()
+        if self.mr_image.pixmap() != qpix:
+            self.mr_image.setPixmap(qpix)  # set the main image to the current Frame
+        # histogram time
+        newbar = pg.BarGraphItem(x=self.histogramx, height=histogram, width=5, brush='g')
+        if self.bargraph != newbar:
+            self.histogram.clear()
+            self.bargraph = newbar
+            self.histogram.addItem(self.bargraph)
+
+    def framechange(self):
+        # called when you change the slider in the video player
+        slv = self.progress_bar.value()
+        self.CurMov.currentframe = slv
+        self.update_all_things()
+
+    def sliderchange(self):
+        # called when changing the brightness slider
+        slv = self.slider_brightness.value()
+        self.CurMov.brightness = slv
+        self.update_all_things()
 
     def play_button(self):
+        # you could skip this check, on the expense that repeatedly pressing play lags the player a bit
         if self.timer.isActive():
             return
         self.timer.start(100)
 
-    def next_frame(self):
-        # regarding main image
-        self.CurMov.next_frame()  # MovieClass method to go to the next frame index
-        qpix, histogram = self.CurMov.return_frame()
-        self.mr_image.setPixmap(qpix)  # set the main image to the current Frame
-        self.progress_bar.setValue(self.CurMov.currentframe)  # edit the progress bar
-        # regarding histogram
-        # hour = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
-        # temperature = [30, 32, 34, 32, 33, 31, 29, 32, 35, 45]
-        # # plot data: x, y values
-        self.bargraph = pg.BarGraphItem(x=self.histogramx, height=histogram, width =5, brush = 'g')
-        #self.histogram.plot(hour, temperature)
-        self.histogram.clear()
-        self.histogram.addItem(self.bargraph)
-
-        # This error is due to variable size of the bincount method.........................
-        # IndexError: index 1 is out of bounds for axis 0 with size 1
-        # Traceback (most recent call last):
-
-
-
-    def framechange(self):
-        qpix, histogram = self.CurMov.return_frame()
-        slv = self.progress_bar.value()
-        self.CurMov.currentframe = slv
-        self.mr_image.setPixmap(qpix)
-
-    def sliderchange(self):
-        qpix, histogram = self.CurMov.return_frame()
-        slv = self.slider_brightness.value()
-        self.CurMov.brightness = slv
-        self.mr_image.setPixmap(qpix)
+    # pause_button is through a lambda function.
 
     def reset_button(self):
         self.timer.stop()
         self.CurMov.currentframe = 0
         self.slider_brightness.setValue(0)
         self.progress_bar.setValue(0)
+        self.update_all_things()
 
     # $$$$$$ functions related to dicom manager
     def filebrowse_dcm(self):

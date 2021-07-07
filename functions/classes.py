@@ -1,41 +1,14 @@
 import numpy as np
-from PyQt5 import QtCore, QtWidgets
+from PyQt5 import QtCore, QtGui
 from pydicom import dcmread
 import matplotlib.pyplot as plt
 import os
 import cv2
-import functions.auxillary
 import matplotlib
-from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
-from matplotlib.figure import Figure
 
 matplotlib.use("Qt5Agg")
 
 # here live all the additional classes I'm using
-
-
-# class PopupInput(QtWidgets.QWidget):
-#     def __init__(self):
-#         super().__init__()
-#
-#     def showdialog(self):
-#         text, ok = QtWidgets.QInputDialog.getText(self, 'input dialog', 'Is this ok?')
-#         if ok:
-#             return text
-#         else:
-#             return False
-#
-#
-# class PopupWaring(QtWidgets.QDialog):
-#     def __init__(self,text):
-#         super().__init__()
-#         self.setWindowTitle("watch out kid")
-#         a = QtWidgets.QLabel()
-#         a.setText("this thing aint on autopilot son ")
-#         QtWidgets.QPushButton("a button")
-#
-#     def showme(self):
-#         self.show()
 
 
 class Workersignals(QtCore.QObject):
@@ -80,15 +53,14 @@ class Worker1(QtCore.QRunnable):
         filelist = os.listdir(path)
         filelist.sort()
         img_array = []
-        print("u are here" + path)
-        print(filelist)
+        size = (0, 0)  # initialize to stop pycharm from whining
         # check if list is nonempty
         if filelist:
             for element in filelist:
                 # print(element)
                 fp = path + element
                 img = cv2.imread(fp)
-                h, w, l = img.shape
+                h, w, trash = img.shape
                 # notice the reversal of order ...
                 size = (w, h)
                 img_array.append(img)
@@ -106,18 +78,21 @@ class Worker1(QtCore.QRunnable):
 
 class FrameClass:
     def __init__(self, frame: np.array):
-        self.ogframe = frame  # original and immutable
-        self.qpix = functions.auxillary.cv2qpix(self.ogframe)
+        self.ogframe = frame  # original and immutable (for reference)
+        self.newframe = frame  # mutable
+        # qpix will be sent out to the label for display
+        self.qpix = 0  # not an int! stop pycharm from whining
+        self.change_qpix(self.ogframe)
+
         self.brightness = 0
-        self.newframe = frame
         self.histogram = None
-        self.histogramqpix = None
-        self.hashistogram = False
-        self.once = 0
+        self.has_valid_histogram = False
+        self.gray_slice_p = [0, 0, 0]
 
     def change_qpix(self, frame):
-        # this is weird, import function soon?
-        self.qpix = functions.auxillary.cv2qpix(frame)
+        w, h = frame.shape
+        qim = QtGui.QImage(frame.data.tobytes(), h, w, h, QtGui.QImage.Format_Indexed8)
+        self.qpix = QtGui.QPixmap.fromImage(qim)
 
     def change_brightness(self, bval):
         self.brightness = bval
@@ -129,13 +104,20 @@ class FrameClass:
             self.newframe = np.where((self.ogframe + bval) < 0, 0, self.ogframe + bval)
             self.newframe = self.newframe.astype('uint8')
 
-        self.hashistogram = False
+        self.has_valid_histogram = False
         self.change_qpix(self.newframe)
+
+   # def change_grayslicep(self,frame,newparams: list):
+
 
     def calc_hist(self):
         l, b = self.newframe.shape
         img2 = np.reshape(self.newframe, l * b)
+        # taking the log due to the huge difference between the amount of completely black pixels and the rest
+        # adding + 1 else taking the log is undefined (10log1) = ??
         self.histogram = np.log10(np.bincount(img2, minlength=255)+1)
+        # min length else you will get sizing errors.
+        self.has_valid_histogram = True
 
 
 class MovieClass:
@@ -144,6 +126,7 @@ class MovieClass:
         self.maxframes = 0
         self.framelist = []
         self.brightness = 0
+        self.gray_slice_p = [0, 0, 0]
 
     def create_frameclass(self, imlist):
         self.framelist.clear()
@@ -163,13 +146,29 @@ class MovieClass:
         temp = self.framelist[self.currentframe]
         if self.brightness != temp.brightness:
             temp.change_brightness(self.brightness)
-        if temp.hashistogram is False:
+        if temp.has_valid_histogram is False:
             temp.calc_hist()
         return temp.qpix, temp.histogram
 
-
-class MplCanvas(FigureCanvasQTAgg):
-    def __init__(self, parent=None, width=5, height=4, dpi=100):
-        fig = Figure(figsize=(width, height), dpi=dpi)
-        self.axes = fig.add_subplot(111)
-        super().__init__(fig)
+# class PopupInput(QtWidgets.QWidget):
+#     def __init__(self):
+#         super().__init__()
+#
+#     def showdialog(self):
+#         text, ok = QtWidgets.QInputDialog.getText(self, 'input dialog', 'Is this ok?')
+#         if ok:
+#             return text
+#         else:
+#             return False
+#
+#
+# class PopupWaring(QtWidgets.QDialog):
+#     def __init__(self,text):
+#         super().__init__()
+#         self.setWindowTitle("watch out kid")
+#         a = QtWidgets.QLabel()
+#         a.setText("this thing aint on autopilot son ")
+#         QtWidgets.QPushButton("a button")
+#
+#     def showme(self):
+#         self.show()

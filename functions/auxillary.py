@@ -84,15 +84,4 @@ def loadin(filelist: list, path: str) -> list:
     return imlist
 
 
-def cv2qpix(im: numpy.ndarray):
-    w, h = im.shape
-    qim = QtGui.QImage(im.data.tobytes(), h, w, h, QtGui.QImage.Format_Indexed8)
-    return QtGui.QPixmap.fromImage(qim)
-
-
-def qpixmaker(imlist: list):
-    qpixarray = []
-    for element in imlist:
-        qpixarray.append(cv2qpix(element))
-    return qpixarray
 

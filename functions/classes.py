@@ -1,12 +1,14 @@
+import os
+
+import cv2
+import matplotlib
+import matplotlib.pyplot as plt
 import numpy as np
 from PyQt5 import QtCore, QtGui
 from pydicom import dcmread
-import matplotlib.pyplot as plt
-import os
-import cv2
-import matplotlib
 
 matplotlib.use("Qt5Agg")
+
 
 # here live all the additional classes I'm using
 
@@ -78,23 +80,23 @@ class Worker1(QtCore.QRunnable):
 
 class FrameClass:
     def __init__(self, frame: np.array):
-        self.ogframe = frame    # original and immutable (for reference)
+        self.ogframe = frame  # original and immutable (for reference)
         self.grayframe = frame  # mutable
-        self.gls = frame        # sliced grayscale
+        self.gls = frame  # sliced grayscale
+        self.qpix = self.change_qpix(self.ogframe)
+        self.fft = self.change_qpix(self.ogframe)  # stop pycharm from whining but doesnt make sense otherwise
         # Qpix will be sent out to the label for display
-        self.qpix = 0  # not an int! stop pycharm from whining
-        self.change_qpix(self.ogframe)
-
         self.brightness = 0
         self.histogram = None
         self.has_valid_histogram = False
-        self.gray_slice_p = [0,         0,         0,       0]
+        self.has_valid_fft = False
+        self.gray_slice_p = [0, 0, 0, 0]
         #               brightness[0] boost[1]  lbound[2]  rbound[3]
 
     def change_qpix(self, frame):
         w, h = frame.shape
         qim = QtGui.QImage(frame.data.tobytes(), h, w, h, QtGui.QImage.Format_Indexed8)
-        self.qpix = QtGui.QPixmap.fromImage(qim)
+        return QtGui.QPixmap.fromImage(qim)
 
     def change_grayslicep(self, new_slice_p: list):
         if self.gray_slice_p[0] != new_slice_p[0]:
@@ -121,16 +123,28 @@ class FrameClass:
 
         self.gray_slice_p = new_slice_p
         self.has_valid_histogram = False
-        self.change_qpix(self.gls)
+        self.has_valid_fft = False
+        self.qpix = self.change_qpix(self.gls)
+        print("gls_calced")
 
     def calc_hist(self):
         l, b = self.gls.shape
         img2 = np.reshape(self.gls, l * b)
         # taking the log due to the huge difference between the amount of completely black pixels and the rest
         # adding + 1 else taking the log is undefined (10log1) = ??
-        self.histogram = np.log10(np.bincount(img2, minlength=255)+1)
+        self.histogram = np.log10(np.bincount(img2, minlength=255) + 1)
         # min length else you will get sizing errors.
         self.has_valid_histogram = True
+        print("hist_calced")
+
+    def calc_fft(self):
+        temp = np.fft.fft2(self.gls)
+        temp = np.fft.fftshift(temp)
+        temp = 20 * np.log(np.abs(temp))
+        temp = temp.astype(np.uint8)
+        self.fft = self.change_qpix(temp)
+        self.has_valid_fft = True
+        print("fft_calced")
 
 
 class MovieClass:
@@ -145,7 +159,7 @@ class MovieClass:
         self.framelist.clear()
         for element in imlist:
             self.framelist.append(FrameClass(element))
-        self.maxframes = len(imlist)-1
+        self.maxframes = len(imlist) - 1
 
     def next_frame(self):
         if self.currentframe == self.maxframes:
@@ -162,7 +176,9 @@ class MovieClass:
             temp.change_grayslicep(self.gray_slice_p)
         if temp.has_valid_histogram is False:
             temp.calc_hist()
-        return temp.qpix, temp.histogram
+        if temp.has_valid_fft is False:
+            temp.calc_fft()
+        return temp.qpix, temp.histogram, temp.fft
 
 
 class SliderClass:

@@ -37,6 +37,7 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.mr_image.setScaledContents(True)
         self.label_logo_uni.setPixmap((QtGui.QPixmap("./QT_Gui/images/UTlogo.png")))
         self.label_logo_uni.setScaledContents(True)
+        self.fourier_image.setScaledContents(True)
 
         self.stackedWidget.setCurrentIndex(0)  # initialize to homepage
 
@@ -109,7 +110,7 @@ class BuildUp(gui_full.Ui_MainWindow):
         if self.progress_bar.value() != self.CurMov.currentframe:
             self.progress_bar.setValue(self.CurMov.currentframe)  # edit the progress bar
 
-        qpix, histogram = self.CurMov.return_frame()
+        qpix, histogram, fft = self.CurMov.return_frame()
         if self.mr_image.pixmap() != qpix:
             self.mr_image.setPixmap(qpix)  # set the main image to the current Frame
         # histogram time
@@ -118,6 +119,8 @@ class BuildUp(gui_full.Ui_MainWindow):
             self.histogram.clear()
             self.bargraph = newbar
             self.histogram.addItem(self.bargraph)
+        if self.fourier_image != fft:
+            self.fourier_image.setPixmap(fft)
 
     def framechange(self):
         # called when you change the progress bar in the video player

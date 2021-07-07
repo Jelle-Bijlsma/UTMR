@@ -78,41 +78,54 @@ class Worker1(QtCore.QRunnable):
 
 class FrameClass:
     def __init__(self, frame: np.array):
-        self.ogframe = frame  # original and immutable (for reference)
-        self.newframe = frame  # mutable
-        # qpix will be sent out to the label for display
+        self.ogframe = frame    # original and immutable (for reference)
+        self.grayframe = frame  # mutable
+        self.gls = frame        # sliced grayscale
+        # Qpix will be sent out to the label for display
         self.qpix = 0  # not an int! stop pycharm from whining
         self.change_qpix(self.ogframe)
 
         self.brightness = 0
         self.histogram = None
         self.has_valid_histogram = False
-        self.gray_slice_p = [0, 0, 0]
+        self.gray_slice_p = [0,         0,         0,       0]
+        #               brightness[0] boost[1]  lbound[2]  rbound[3]
 
     def change_qpix(self, frame):
         w, h = frame.shape
         qim = QtGui.QImage(frame.data.tobytes(), h, w, h, QtGui.QImage.Format_Indexed8)
         self.qpix = QtGui.QPixmap.fromImage(qim)
 
-    def change_brightness(self, bval):
-        self.brightness = bval
-        bval = int(bval)  # cast to be sure
+    def change_grayslicep(self, new_slice_p: list):
+        if self.gray_slice_p[0] != new_slice_p[0]:
+            bval = int(new_slice_p[0])  # cast to be sure
+            if bval > 0:
+                self.grayframe = np.where((255 - self.ogframe) < bval, 255, self.ogframe + bval)
+            else:
+                self.grayframe = np.where((self.ogframe + bval) < 0, 0, self.ogframe + bval)
+                self.grayframe = self.grayframe.astype('uint8')
 
-        if bval > 0:
-            self.newframe = np.where((255 - self.ogframe) < bval, 255, self.ogframe + bval)
-        else:
-            self.newframe = np.where((self.ogframe + bval) < 0, 0, self.ogframe + bval)
-            self.newframe = self.newframe.astype('uint8')
+        if self.gray_slice_p[0:4] != new_slice_p[0:4]:
+            # print(new_slice_p)
+            boost = new_slice_p[1]
+            lbound = new_slice_p[2]
+            rbound = new_slice_p[3]
+            self.grayframe = self.grayframe.astype(np.int16, casting='unsafe')
+            # print(self.grayframe.dtype)
+            temp = np.where((self.grayframe >= lbound) & (self.grayframe <= rbound), self.grayframe + boost,
+                            self.grayframe)
+            temp2 = np.where(temp > 255, 255, temp)
+            temp2 = np.where(temp2 < 0, 0, temp2)
+            self.gls = temp2.astype(np.uint8)
+            self.grayframe = self.grayframe.astype(np.uint8)
 
+        self.gray_slice_p = new_slice_p
         self.has_valid_histogram = False
-        self.change_qpix(self.newframe)
-
-   # def change_grayslicep(self,frame,newparams: list):
-
+        self.change_qpix(self.gls)
 
     def calc_hist(self):
-        l, b = self.newframe.shape
-        img2 = np.reshape(self.newframe, l * b)
+        l, b = self.gls.shape
+        img2 = np.reshape(self.gls, l * b)
         # taking the log due to the huge difference between the amount of completely black pixels and the rest
         # adding + 1 else taking the log is undefined (10log1) = ??
         self.histogram = np.log10(np.bincount(img2, minlength=255)+1)
@@ -126,7 +139,7 @@ class MovieClass:
         self.maxframes = 0
         self.framelist = []
         self.brightness = 0
-        self.gray_slice_p = [0, 0, 0]
+        self.gray_slice_p = [0, 0, 0, 0]
 
     def create_frameclass(self, imlist):
         self.framelist.clear()
@@ -144,11 +157,32 @@ class MovieClass:
         # temp is a reference to the object in the list, so modifications to temp are propageted
         # meaning, after all the frames have been adjusted, no more calculations are done.
         temp = self.framelist[self.currentframe]
-        if self.brightness != temp.brightness:
-            temp.change_brightness(self.brightness)
+        # compare expected values (of movieclass) to frameclass
+        if self.gray_slice_p != temp.gray_slice_p:
+            temp.change_grayslicep(self.gray_slice_p)
         if temp.has_valid_histogram is False:
             temp.calc_hist()
         return temp.qpix, temp.histogram
+
+
+class SliderClass:
+    def __init__(self, slides, line_edits):
+        # Order of 'slides' is important for use is the initial brightness section. Could maybe improve this
+        # by using key value pairs?
+        self.sliderlist = slides
+        self.line_editlist = line_edits
+
+    def valueset(self, value):
+        for element in self.sliderlist:
+            element.setValue(value)
+
+    def getvalue(self):
+        vallist = []
+        for slider, lineedit in zip(self.sliderlist, self.line_editlist):
+            slidervalue = slider.value()
+            vallist.append(slidervalue)
+            lineedit.setText(str(slidervalue))
+        return vallist
 
 # class PopupInput(QtWidgets.QWidget):
 #     def __init__(self):

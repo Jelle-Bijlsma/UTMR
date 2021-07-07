@@ -2578,8 +2578,17 @@
           <height>431</height>
          </rect>
         </property>
+        <property name="minimum">
+         <number>-255</number>
+        </property>
+        <property name="maximum">
+         <number>255</number>
+        </property>
+        <property name="value">
+         <number>0</number>
+        </property>
         <property name="sliderPosition">
-         <number>31</number>
+         <number>0</number>
         </property>
         <property name="orientation">
          <enum>Qt::Vertical</enum>
@@ -2594,8 +2603,17 @@
           <height>431</height>
          </rect>
         </property>
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>255</number>
+        </property>
+        <property name="value">
+         <number>255</number>
+        </property>
         <property name="sliderPosition">
-         <number>50</number>
+         <number>255</number>
         </property>
         <property name="orientation">
          <enum>Qt::Vertical</enum>
@@ -2609,6 +2627,12 @@
           <width>41</width>
           <height>431</height>
          </rect>
+        </property>
+        <property name="minimum">
+         <number>-255</number>
+        </property>
+        <property name="maximum">
+         <number>255</number>
         </property>
         <property name="orientation">
          <enum>Qt::Vertical</enum>
@@ -2681,8 +2705,14 @@
           <height>431</height>
          </rect>
         </property>
+        <property name="maximum">
+         <number>254</number>
+        </property>
+        <property name="value">
+         <number>0</number>
+        </property>
         <property name="sliderPosition">
-         <number>4</number>
+         <number>0</number>
         </property>
         <property name="orientation">
          <enum>Qt::Vertical</enum>
@@ -2712,6 +2742,16 @@
         <property name="geometry">
          <rect>
           <x>120</x>
+          <y>560</y>
+          <width>51</width>
+          <height>21</height>
+         </rect>
+        </property>
+       </widget>
+       <widget class="QLineEdit" name="lineEdit_Brightness">
+        <property name="geometry">
+         <rect>
+          <x>40</x>
           <y>560</y>
           <width>51</width>
           <height>21</height>

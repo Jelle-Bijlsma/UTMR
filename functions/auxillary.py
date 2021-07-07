@@ -1,9 +1,8 @@
 import os
 import cv2
-import numpy
 from pydicom import dcmread
 import matplotlib.pyplot as plt
-from PyQt5 import QtWidgets, QtGui
+from PyQt5 import QtWidgets
 
 
 def png2avi(path: str, fps: int) -> None:

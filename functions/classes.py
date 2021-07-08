@@ -1,15 +1,11 @@
 import os
 
 import cv2
-import matplotlib
 import matplotlib.pyplot as plt
 import numpy as np
 from PyQt5 import QtCore, QtGui
 from pydicom import dcmread
-
-matplotlib.use("Qt5Agg")
-
-
+import functions.auxillary
 # here live all the additional classes I'm using
 
 
@@ -91,7 +87,9 @@ class FrameClass:
         self.has_valid_histogram = False
         self.has_valid_fft = False
         self.gray_slice_p = [0, 0, 0, 0]
-        #               brightness[0] boost[1]  lbound[2]  rbound[3]
+        # brightness[0] boost[1]  lbound[2]  rbound[3]
+        self.filter_b = np.empty(0)
+        self.b_filter_p = [False, 0, 0]
 
     def change_qpix(self, frame):
         w, h = frame.shape
@@ -125,7 +123,7 @@ class FrameClass:
         self.has_valid_histogram = False
         self.has_valid_fft = False
         self.qpix = self.change_qpix(self.gls)
-        print("gls_calced")
+        # print("gls_calced")
 
     def calc_hist(self):
         l, b = self.gls.shape
@@ -135,16 +133,41 @@ class FrameClass:
         self.histogram = np.log10(np.bincount(img2, minlength=255) + 1)
         # min length else you will get sizing errors.
         self.has_valid_histogram = True
-        print("hist_calced")
+        # print("hist_calced")
 
     def calc_fft(self):
-        temp = np.fft.fft2(self.gls)
-        temp = np.fft.fftshift(temp)
+        # https://docs.opencv.org/4.5.2/de/dbc/tutorial_py_fourier_transform.html
+        self.ogFFT2 = np.fft.fft2(self.gls)
+        if self.isfiltered is False:
+            self.ogFFT = np.fft.fft2(self.gls)
+        else:
+            self.ogFFT = self.filtered_fft
+        # outputs a float
+        temp = np.fft.fftshift(self.ogFFT)
         temp = 20 * np.log(np.abs(temp))
+        # rescale else the casting to .uint8 loops back and you get a black spot in the middle of the FFT
+        temp *= 255/np.max(temp)
         temp = temp.astype(np.uint8)
+        # have to cast to .uint8 or change_qpix messes up
         self.fft = self.change_qpix(temp)
         self.has_valid_fft = True
-        print("fft_calced")
+        # print("fft_calced")
+
+    def calc_bfilter(self, filter,filterparams):
+        if np.array_equal(filter,self.filter_b):
+            return
+        # Z = np.fft.ifftshift(Z)
+        output = np.multiply(np.fft.fftshift(filter), self.ogFFT2)
+        self.filtered_fft = output
+        output = np.fft.ifft2(output)
+        output *= 255 / np.max(output)
+        output = output.astype(np.uint8)
+        # self.gls = output
+        self.qpix = self.change_qpix(output)
+        self.filter_b = filter
+        self.b_filter_p[1:2] = filterparams
+        self.has_valid_fft = False
+        self.isfiltered = True
 
 
 class MovieClass:
@@ -154,6 +177,11 @@ class MovieClass:
         self.framelist = []
         self.brightness = 0
         self.gray_slice_p = [0, 0, 0, 0]
+        # brightness[0] boost[1]  lbound[2]  rbound[3]
+        self.b_filter_p = [False,1,0]
+        # on [0] cutoff [1] order [2]
+        self.b_filter = np.empty(0)
+        self.b_filter_out = []
 
     def create_frameclass(self, imlist):
         self.framelist.clear()
@@ -177,9 +205,26 @@ class MovieClass:
         if temp.has_valid_histogram is False:
             temp.calc_hist()
         if temp.has_valid_fft is False:
+            temp.isfiltered = False
             temp.calc_fft()
-        return temp.qpix, temp.histogram, temp.fft
+            if not self.b_filter.any():
+                self.b_filter = temp.ogFFT  # just a placeholder for the size
+                self.getnewbfilter()
+        if self.b_filter_p[0] is True:
+            if self.b_filter_p[1:2] != temp.b_filter_p[1:2]:
+                temp.calc_bfilter(self.b_filter, self.b_filter_p[1:2])
+                temp.calc_fft()
+        return temp.qpix, temp.histogram, temp.fft, self.b_filter_out
+        # movieclass keeps the b_filter
 
+    def getnewbfilter(self):
+        self.b_filter = functions.auxillary.butter_filter(self.b_filter, self.b_filter_p[1], self.b_filter_p[2])
+        self.b_filter_out = self.b_filter
+        self.b_filter_out *= 255 / np.max(self.b_filter)
+        self.b_filter_out = self.b_filter_out.astype(np.uint8)
+        w, h = self.b_filter.shape
+        qim = QtGui.QImage(self.b_filter_out.data.tobytes(), h, w, h, QtGui.QImage.Format_Indexed8)
+        self.b_filter_out = QtGui.QPixmap.fromImage(qim)
 
 class SliderClass:
     def __init__(self, slides, line_edits):

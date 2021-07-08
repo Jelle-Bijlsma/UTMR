@@ -7,7 +7,7 @@ import functions.classes
 import pyqtgraph as pg
 
 
-# the whole thing is just existing within this class.
+    # the whole thing is just existing within this class.
 class BuildUp(gui_full.Ui_MainWindow):
     def __init__(self):
         super().__init__()
@@ -22,12 +22,13 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.CurMov = functions.classes.MovieClass()
         self.histogramx = list(range(0, 255))  # the x-range of the histogram
         self.bargraph = pg.BarGraphItem()  # the histogram widget inside plotwidget (which is called self.histogram)
+        self.b_filter = []
 
 
     def setup_ui2(self):
         # this is setting up the GUI more. More convenient here than in QT designer.
         # For some reason doesnt work when put in __init__
-
+        self.check_filter1.setChecked(1)
         sliderlist = [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
         line_editlist = [self.lineEdit_Brightness, self.lineEdit_Boost, self.lineEdit_Lbound, self.lineEdit_Rbound]
         self.MySliders = functions.classes.SliderClass(sliderlist, line_editlist)
@@ -39,7 +40,8 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.label_logo_uni.setScaledContents(True)
         self.fourier_image.setScaledContents(True)
 
-        self.stackedWidget.setCurrentIndex(0)  # initialize to homepage
+        # self.stackedWidget.setCurrentIndex(0)  # initialize to homepage
+        self.stackedWidget.setCurrentIndex(1)  # initialize to homepage
 
         # home page
         self.button_2dicom.clicked.connect(lambda: self.stackedWidget.setCurrentIndex(2))
@@ -58,6 +60,10 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.slider_boost.valueChanged.connect(self.sliderchange)
         self.slider_Lbound.valueChanged.connect(self.sliderchange)
         self.slider_Rbound.valueChanged.connect(self.sliderchange)
+        # filter
+        self.slider_f_cutoff.valueChanged.connect(self.filterchange)
+        self.slider_f_order.valueChanged.connect(self.filterchange)
+        self.filter_image1.setScaledContents(True)
 
         # dicom page
         self.pb_convert.clicked.connect(self.convert)
@@ -74,6 +80,17 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.sliderchange()
 
     # $$$$$$$$  functions relating to video editor
+    def filterchange(self):
+        if self.check_filter1.checkState() == 0:
+            TF = False
+        else:
+            TF = True
+        a = self.slider_f_cutoff.value()
+        b = self.slider_f_order.value()
+        self.CurMov.b_filter_p = [TF, a, b]
+        self.CurMov.getnewbfilter()
+        self.update_all_things()
+
     def filebrowse_png(self, test=False):
         a = QtWidgets.QFileDialog()
         a.setDirectory("./data/png/")
@@ -110,7 +127,7 @@ class BuildUp(gui_full.Ui_MainWindow):
         if self.progress_bar.value() != self.CurMov.currentframe:
             self.progress_bar.setValue(self.CurMov.currentframe)  # edit the progress bar
 
-        qpix, histogram, fft = self.CurMov.return_frame()
+        qpix, histogram, fft, b_filter = self.CurMov.return_frame()
         if self.mr_image.pixmap() != qpix:
             self.mr_image.setPixmap(qpix)  # set the main image to the current Frame
         # histogram time
@@ -121,6 +138,9 @@ class BuildUp(gui_full.Ui_MainWindow):
             self.histogram.addItem(self.bargraph)
         if self.fourier_image != fft:
             self.fourier_image.setPixmap(fft)
+        if self.b_filter != b_filter:
+            self.filter_image1.setPixmap(b_filter)
+            self.b_filter = b_filter
 
     def framechange(self):
         # called when you change the progress bar in the video player

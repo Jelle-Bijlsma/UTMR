@@ -3,6 +3,7 @@ import cv2
 from pydicom import dcmread
 import matplotlib.pyplot as plt
 from PyQt5 import QtWidgets
+import numpy as np
 
 
 def png2avi(path: str, fps: int) -> None:
@@ -83,4 +84,16 @@ def loadin(filelist: list, path: str) -> list:
     return imlist
 
 
+def butter_filter(fft, cutoff, order):
+    x_dim, y_dim = np.shape(fft)
+    x_max = x_dim / 2
+    y_max = y_dim / 2
+    x = np.arange(-x_max, x_max, 1)
+    y = np.arange(-y_max, y_max, 1)
 
+    X, Y = np.meshgrid(x, y)
+
+    xterm = 1/(np.sqrt(1+(X/cutoff)**(2*order)))
+    yterm = 1/(np.sqrt(1+(Y/cutoff)**(2*order)))
+    Z = (xterm+yterm)/2
+    return Z

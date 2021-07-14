@@ -1,14 +1,11 @@
 import os
-
 import cv2
 import matplotlib.pyplot as plt
-import numpy as np
-from PyQt5 import QtCore, QtGui
+from PyQt5 import QtCore
 from pydicom import dcmread
-import functions.auxiliary
-# here live all the additional classes I'm using
 
 
+# here live all the additional  small classes I'm using
 class Workersignals(QtCore.QObject):
     # This could be redundant due to an error I made previously.
     # Could incorporate in the Worker1?
@@ -72,6 +69,7 @@ class Worker1(QtCore.QRunnable):
         # fourcc: Een FourCC is een reeks van vier bytes gebruikt om dataformaten te identificeren.
         self.signals.videodone.emit()
         return
+
 
 class SliderClass:
     def __init__(self, slides, line_edits):

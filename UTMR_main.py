@@ -3,6 +3,8 @@ import os
 from PyQt5 import QtCore, QtGui, QtWidgets
 from QT_Gui import gui_full
 import functions.auxiliary
+import classes.class_frameclass
+import classes.class_movieclass
 import classes.class_extra
 import pyqtgraph as pg
 
@@ -19,7 +21,7 @@ class BuildUp(gui_full.Ui_MainWindow):
         print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
 
         # start initializing variables
-        self.CurMov = classes.class_extra.MovieClass()
+        self.CurMov = classes.class_movieclass.MovieClass()
         self.histogramx = list(range(0, 255))  # the x-range of the histogram
         self.bargraph = pg.BarGraphItem()  # the histogram widget inside plotwidget (which is called self.histogram)
         self.b_filter = []
@@ -60,8 +62,8 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.slider_Lbound.valueChanged.connect(self.sliderchange)
         self.slider_Rbound.valueChanged.connect(self.sliderchange)
         # filter
-        self.slider_f_cutoff.valueChanged.connect(self.filterchange)
-        self.slider_f_order.valueChanged.connect(self.filterchange)
+        # self.slider_f_cutoff.valueChanged.connect(self.filterchange)
+        # self.slider_f_order.valueChanged.connect(self.filterchange)
         self.filter_image1.setScaledContents(True)
 
         # dicom page
@@ -74,22 +76,22 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.actionImage_processing.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(1))
         self.actionDicom_Edit.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(2))
 
-        # test
-        self.filebrowse_png(True)
-        self.sliderchange()
+        # test (also very important)
+        self.filebrowse_png(True)  # load in all images and go through update cycle
+        self.sliderchange()  # load the slider brightness settings in, go through update cycle
 
     # $$$$$$$$  functions relating to video editor
-    def filterchange(self, check = False):
-        if self.check_filter1.checkState() == 0:
-            TF = False
-        else:
-            TF = True
-        a = self.slider_f_cutoff.value()
-        b = self.slider_f_order.value()
-        self.CurMov.b_filter_p = [TF, a, b]
-        self.CurMov.getnewbfilter()
-        if check is False:
-            self.update_all_things()
+    # def filterchange(self, check=False):
+    #     if self.check_filter1.checkState() == 0:
+    #         TF = False
+    #     else:
+    #         TF = True
+    #     a = self.slider_f_cutoff.value()
+    #     b = self.slider_f_order.value()
+    #     self.CurMov.par = [TF, a, b]
+    #     self.CurMov.getnewbfilter()
+    #     if check is False:
+    #         self.update_all_things()
 
     def filebrowse_png(self, test=False):
         a = QtWidgets.QFileDialog()
@@ -127,34 +129,31 @@ class BuildUp(gui_full.Ui_MainWindow):
         if self.progress_bar.value() != self.CurMov.currentframe:
             self.progress_bar.setValue(self.CurMov.currentframe)  # edit the progress bar
 
-        # this creates the filter in the MovieClass
-        self.filterchange(check=True)
+        qpix, histogram, fft = self.CurMov.return_frame()
+        self.mr_image.setPixmap(qpix)  # set the main image to the current Frame
 
-        qpix, histogram, fft, b_filter = self.CurMov.return_frame()
-        if self.mr_image.pixmap() != qpix:
-            self.mr_image.setPixmap(qpix)  # set the main image to the current Frame
         # histogram time
         newbar = pg.BarGraphItem(x=self.histogramx, height=histogram, width=5, brush='g')
-        if self.bargraph != newbar:
-            self.histogram.clear()
-            self.bargraph = newbar
-            self.histogram.addItem(self.bargraph)
-        if self.fourier_image != fft:
-            self.fourier_image.setPixmap(fft)
-        if self.b_filter != b_filter:
-            self.filter_image1.setPixmap(b_filter)
-            self.b_filter = b_filter
+        self.histogram.clear()
+        self.bargraph = newbar
+        self.histogram.addItem(self.bargraph)
+        self.fourier_image.setPixmap(fft)
+        # if self.b_filter != b_filter:
+        #     self.filter_image1.setPixmap(b_filter)
+        #     self.b_filter = b_filter
 
     def framechange(self):
-        # called when you change the progress bar in the video player
-        slv = self.progress_bar.value()
-        self.CurMov.currentframe = slv
-        self.update_all_things()
+        # called when you (or the machine) change the progress bar in the video player
+        slider_value = self.progress_bar.value()
+        self.CurMov.currentframe = slider_value
+        # updating the slider automatically (due to the movie playing, also triggers this command). This means
+        # calling an update on the progress bar position by means of "progress.bar.setValue" will lead you back
+        # an make for double calculations.
 
     def sliderchange(self):
         # [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
         paramlist = self.MySliders.getvalue()
-        self.CurMov.gray_slice_p = paramlist
+        self.CurMov.parameters['GLS'] = paramlist
         self.update_all_things()
 
     def play_button(self):

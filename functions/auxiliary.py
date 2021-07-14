@@ -2,7 +2,7 @@ import os
 import cv2
 from pydicom import dcmread
 import matplotlib.pyplot as plt
-from PyQt5 import QtWidgets
+from PyQt5 import QtWidgets, QtGui
 import numpy as np
 
 
@@ -97,3 +97,34 @@ def butter_filter(fft, cutoff, order):
     yterm = 1/(np.sqrt(1+(Y/cutoff)**(2*order)))
     Z = (xterm+yterm)/2
     return Z
+
+
+def change_qpix(frame: np.array([])):
+    if frame.dtype != np.uint8:  # this check is very important. Frames already in uint8 will go to zero if
+        frame_normalized = (frame * 255) / np.max(frame)  # normalized like this
+        frame = frame_normalized.astype(np.uint8)
+    w, h = frame.shape
+    qim = QtGui.QImage(frame.data.tobytes(), h, w, h, QtGui.QImage.Format_Indexed8)
+    return QtGui.QPixmap.fromImage(qim)
+
+
+def calc_hist(frame: np.array([])):
+    l, b = frame.shape
+    img2 = np.reshape(frame, l * b)
+    # taking the log due to the huge difference between the amount of completely black pixels and the rest
+    # adding + 1 else taking the log is undefined (10log1) = ??
+    histogram = np.log10(np.bincount(img2, minlength=255) + 1)
+    # min length else you will get sizing errors.
+    return histogram
+
+
+def calc_fft(frame, qpix=False):
+    # https://docs.opencv.org/4.5.2/de/dbc/tutorial_py_fourier_transform.html
+    fft = np.fft.fft2(frame)  # outputs a float
+    if qpix is False:
+        return fft
+    else:
+        temp_fft = np.fft.fftshift(fft)
+        fft_gl = 20 * np.log(np.abs(temp_fft))
+        # i don't know about this chief.
+        return change_qpix(fft_gl)

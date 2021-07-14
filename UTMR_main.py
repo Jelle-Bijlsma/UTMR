@@ -2,12 +2,12 @@ import sys
 import os
 from PyQt5 import QtCore, QtGui, QtWidgets
 from QT_Gui import gui_full
-import functions.auxillary
-import functions.classes
+import functions.auxiliary
+import classes.class_extra
 import pyqtgraph as pg
 
 
-    # the whole thing is just existing within this class.
+# the whole thing is just existing within this class.
 class BuildUp(gui_full.Ui_MainWindow):
     def __init__(self):
         super().__init__()
@@ -19,11 +19,10 @@ class BuildUp(gui_full.Ui_MainWindow):
         print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
 
         # start initializing variables
-        self.CurMov = functions.classes.MovieClass()
+        self.CurMov = classes.class_extra.MovieClass()
         self.histogramx = list(range(0, 255))  # the x-range of the histogram
         self.bargraph = pg.BarGraphItem()  # the histogram widget inside plotwidget (which is called self.histogram)
         self.b_filter = []
-
 
     def setup_ui2(self):
         # this is setting up the GUI more. More convenient here than in QT designer.
@@ -31,7 +30,7 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.check_filter1.setChecked(1)
         sliderlist = [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
         line_editlist = [self.lineEdit_Brightness, self.lineEdit_Boost, self.lineEdit_Lbound, self.lineEdit_Rbound]
-        self.MySliders = functions.classes.SliderClass(sliderlist, line_editlist)
+        self.MySliders = classes.class_extra.SliderClass(sliderlist, line_editlist)
 
         # load pictures in
         self.mr_image.setPixmap(QtGui.QPixmap("./QT_Gui/images/baseimage.png"))
@@ -80,7 +79,7 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.sliderchange()
 
     # $$$$$$$$  functions relating to video editor
-    def filterchange(self):
+    def filterchange(self, check = False):
         if self.check_filter1.checkState() == 0:
             TF = False
         else:
@@ -89,7 +88,8 @@ class BuildUp(gui_full.Ui_MainWindow):
         b = self.slider_f_order.value()
         self.CurMov.b_filter_p = [TF, a, b]
         self.CurMov.getnewbfilter()
-        self.update_all_things()
+        if check is False:
+            self.update_all_things()
 
     def filebrowse_png(self, test=False):
         a = QtWidgets.QFileDialog()
@@ -102,8 +102,8 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.lineEdit_importpath.setText(path)
         filelist = os.listdir(path)
         filelist.sort()
-        if functions.auxillary.checkifpng(filelist) == 0:
-            functions.auxillary.popupmsg("NO PNG IN FOLDER", "warning")
+        if functions.auxiliary.checkifpng(filelist) == 0:
+            functions.auxiliary.popupmsg("NO PNG IN FOLDER", "warning")
             self.pb_play.setEnabled(False)
             self.pb_play.setToolTip("Try selecting a folder with .png")
             return
@@ -111,7 +111,7 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.pb_play.setToolTip("")
 
         # create temp list of all images in np.array() format
-        imlist = functions.auxillary.loadin(filelist, path)
+        imlist = functions.auxiliary.loadin(filelist, path)
         self.CurMov.create_frameclass(imlist)
         self.progress_bar.setMaximum(self.CurMov.maxframes)
         self.update_all_things()
@@ -126,6 +126,9 @@ class BuildUp(gui_full.Ui_MainWindow):
         # if statement to reduce calculation costs
         if self.progress_bar.value() != self.CurMov.currentframe:
             self.progress_bar.setValue(self.CurMov.currentframe)  # edit the progress bar
+
+        # this creates the filter in the MovieClass
+        self.filterchange(check=True)
 
         qpix, histogram, fft, b_filter = self.CurMov.return_frame()
         if self.mr_image.pixmap() != qpix:
@@ -236,7 +239,7 @@ class BuildUp(gui_full.Ui_MainWindow):
                     os.mkdir(projectpath)
 
         # initialize worker thread
-        dcm2pngworker = functions.classes.Worker1()
+        dcm2pngworker = classes.class_extra.Worker1()
         filelist = os.listdir(dcmpath)
         filelist.sort()
 

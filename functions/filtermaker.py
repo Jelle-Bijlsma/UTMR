@@ -1,5 +1,4 @@
 import numpy as np
-import matplotlib.cm as cm
 import matplotlib.pyplot as plt
 
 
@@ -12,7 +11,7 @@ y_max = y_dim / 2
 x = np.arange(-x_max, x_max, 1)
 y = np.arange(-y_max, y_max, 1)
 
-X,Y = np.meshgrid(x,y)
+X, Y = np.meshgrid(x, y)
 
 xterm = 1/(np.sqrt(1+(X/cutoff)**2))
 yterm = 1/(np.sqrt(1+(Y/cutoff)**2))
@@ -20,9 +19,9 @@ yterm = 1/(np.sqrt(1+(Y/cutoff)**2))
 Z = (xterm+yterm)/2
 Z = np.fft.ifftshift(Z)
 fig, ax = plt.subplots()
-im = ax.imshow(Z,interpolation='nearest')
+im = ax.imshow(Z, interpolation='nearest')
 
-a = np.multiply(np.fft.fftshift(Z),Z)
+a = np.multiply(np.fft.fftshift(Z), Z)
 
 plt.show()
 

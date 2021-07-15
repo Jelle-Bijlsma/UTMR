@@ -2,8 +2,10 @@ import sys
 import os
 from PyQt5 import QtCore, QtGui, QtWidgets
 from QT_Gui import gui_full
-import functions.auxillary
-import functions.classes
+import functions.auxiliary
+import classes.class_frameclass
+import classes.class_movieclass
+import classes.class_extra
 import pyqtgraph as pg
 
 
@@ -19,18 +21,18 @@ class BuildUp(gui_full.Ui_MainWindow):
         print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
 
         # start initializing variables
-        self.CurMov = functions.classes.MovieClass()
+        self.CurMov = classes.class_movieclass.MovieClass()
         self.histogramx = list(range(0, 255))  # the x-range of the histogram
         self.bargraph = pg.BarGraphItem()  # the histogram widget inside plotwidget (which is called self.histogram)
-
+        self.b_filter = []
 
     def setup_ui2(self):
         # this is setting up the GUI more. More convenient here than in QT designer.
         # For some reason doesnt work when put in __init__
-
+        self.check_filter1.setChecked(1)
         sliderlist = [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
         line_editlist = [self.lineEdit_Brightness, self.lineEdit_Boost, self.lineEdit_Lbound, self.lineEdit_Rbound]
-        self.MySliders = functions.classes.SliderClass(sliderlist, line_editlist)
+        self.MySliders = classes.class_extra.SliderClass(sliderlist, line_editlist)
 
         # load pictures in
         self.mr_image.setPixmap(QtGui.QPixmap("./QT_Gui/images/baseimage.png"))
@@ -39,7 +41,8 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.label_logo_uni.setScaledContents(True)
         self.fourier_image.setScaledContents(True)
 
-        self.stackedWidget.setCurrentIndex(0)  # initialize to homepage
+        # self.stackedWidget.setCurrentIndex(0)  # initialize to homepage
+        self.stackedWidget.setCurrentIndex(1)  # initialize to homepage
 
         # home page
         self.button_2dicom.clicked.connect(lambda: self.stackedWidget.setCurrentIndex(2))
@@ -58,6 +61,11 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.slider_boost.valueChanged.connect(self.sliderchange)
         self.slider_Lbound.valueChanged.connect(self.sliderchange)
         self.slider_Rbound.valueChanged.connect(self.sliderchange)
+        # filter 1
+        self.slider_f_cutoff.valueChanged.connect(self.filterchange)
+        self.slider_f_order.valueChanged.connect(self.filterchange)
+        self.check_filter1.clicked.connect(self.filterchange)
+        self.filter_image1.setScaledContents(True)
 
         # dicom page
         self.pb_convert.clicked.connect(self.convert)
@@ -69,11 +77,23 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.actionImage_processing.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(1))
         self.actionDicom_Edit.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(2))
 
-        # test
-        self.filebrowse_png(True)
-        self.sliderchange()
+        # test (also very important)
+        self.filebrowse_png(True)  # load in all images and go through update cycle
+        self.sliderchange()  # load the slider brightness settings in, go through update cycle
 
     # $$$$$$$$  functions relating to video editor
+    def filterchange(self):
+        if self.check_filter1.checkState() == 0:
+            TF = False
+        else:
+            TF = True
+        a = self.slider_f_cutoff.value()
+        b = self.slider_f_order.value()
+        self.CurMov.parameters['b_filter'] = [TF, a, b]
+        self.CurMov.getnewbfilter()
+        print("cutoff =  " + str(a) + "  order =  " + str(b))
+        self.update_all_things()
+
     def filebrowse_png(self, test=False):
         a = QtWidgets.QFileDialog()
         a.setDirectory("./data/png/")
@@ -85,8 +105,8 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.lineEdit_importpath.setText(path)
         filelist = os.listdir(path)
         filelist.sort()
-        if functions.auxillary.checkifpng(filelist) == 0:
-            functions.auxillary.popupmsg("NO PNG IN FOLDER", "warning")
+        if functions.auxiliary.checkifpng(filelist) == 0:
+            functions.auxiliary.popupmsg("NO PNG IN FOLDER", "warning")
             self.pb_play.setEnabled(False)
             self.pb_play.setToolTip("Try selecting a folder with .png")
             return
@@ -94,7 +114,7 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.pb_play.setToolTip("")
 
         # create temp list of all images in np.array() format
-        imlist = functions.auxillary.loadin(filelist, path)
+        imlist = functions.auxiliary.loadin(filelist, path)
         self.CurMov.create_frameclass(imlist)
         self.progress_bar.setMaximum(self.CurMov.maxframes)
         self.update_all_things()
@@ -110,28 +130,30 @@ class BuildUp(gui_full.Ui_MainWindow):
         if self.progress_bar.value() != self.CurMov.currentframe:
             self.progress_bar.setValue(self.CurMov.currentframe)  # edit the progress bar
 
-        qpix, histogram, fft = self.CurMov.return_frame()
-        if self.mr_image.pixmap() != qpix:
-            self.mr_image.setPixmap(qpix)  # set the main image to the current Frame
+        qpix, histogram, fft, b_filter = self.CurMov.return_frame()
+        self.mr_image.setPixmap(qpix)  # set the main image to the current Frame
+
         # histogram time
         newbar = pg.BarGraphItem(x=self.histogramx, height=histogram, width=5, brush='g')
-        if self.bargraph != newbar:
-            self.histogram.clear()
-            self.bargraph = newbar
-            self.histogram.addItem(self.bargraph)
-        if self.fourier_image != fft:
-            self.fourier_image.setPixmap(fft)
+        self.histogram.clear()
+        self.bargraph = newbar
+        self.histogram.addItem(self.bargraph)
+        self.fourier_image.setPixmap(fft)
+        self.filter_image1.setPixmap(b_filter)
+
 
     def framechange(self):
-        # called when you change the progress bar in the video player
-        slv = self.progress_bar.value()
-        self.CurMov.currentframe = slv
-        self.update_all_things()
+        # called when you (or the machine) change the progress bar in the video player
+        slider_value = self.progress_bar.value()
+        self.CurMov.currentframe = slider_value
+        # updating the slider automatically (due to the movie playing, also triggers this command). This means
+        # calling an update on the progress bar position by means of "progress.bar.setValue" will lead you back
+        # an make for double calculations.
 
     def sliderchange(self):
         # [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
         paramlist = self.MySliders.getvalue()
-        self.CurMov.gray_slice_p = paramlist
+        self.CurMov.parameters['gls'] = paramlist
         self.update_all_things()
 
     def play_button(self):
@@ -216,7 +238,7 @@ class BuildUp(gui_full.Ui_MainWindow):
                     os.mkdir(projectpath)
 
         # initialize worker thread
-        dcm2pngworker = functions.classes.Worker1()
+        dcm2pngworker = classes.class_extra.Worker1()
         filelist = os.listdir(dcmpath)
         filelist.sort()
 

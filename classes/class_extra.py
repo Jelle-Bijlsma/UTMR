@@ -72,11 +72,15 @@ class Worker1(QtCore.QRunnable):
 
 
 class SliderClass:
-    def __init__(self, slides, line_edits):
+    def __init__(self, slides, line_edits, function, checklist=None):
         # Order of 'slides' is important for use is the initial brightness section. Could maybe improve this
         # by using key value pairs?
+        if checklist is None:
+            checklist = []
         self.sliderlist = slides
         self.line_editlist = line_edits
+        self.checklist = checklist
+        self.setfun(function)
 
     def valueset(self, value):
         for element in self.sliderlist:
@@ -84,11 +88,26 @@ class SliderClass:
 
     def getvalue(self):
         vallist = []
+        # go over the checkboxes, putting False for 0 and True for 1
+        for element in self.checklist:
+            stateval = element.checkState()
+            if stateval == 0:
+                vallist.append(False)
+            else:
+                vallist.append(True)
+        # simultaneously add slidervalue to list and update the line-edits
         for slider, lineedit in zip(self.sliderlist, self.line_editlist):
             slidervalue = slider.value()
             vallist.append(slidervalue)
             lineedit.setText(str(slidervalue))
+        print(vallist)
         return vallist
+
+    def setfun(self, function):
+        for element in self.sliderlist:
+            element.valueChanged.connect(function)
+        for element in self.checklist:
+            element.clicked.connect(function)
 
 # class PopupInput(QtWidgets.QWidget):
 #     def __init__(self):

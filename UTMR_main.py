@@ -61,9 +61,10 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.slider_boost.valueChanged.connect(self.sliderchange)
         self.slider_Lbound.valueChanged.connect(self.sliderchange)
         self.slider_Rbound.valueChanged.connect(self.sliderchange)
-        # filter
-        # self.slider_f_cutoff.valueChanged.connect(self.filterchange)
-        # self.slider_f_order.valueChanged.connect(self.filterchange)
+        # filter 1
+        self.slider_f_cutoff.valueChanged.connect(self.filterchange)
+        self.slider_f_order.valueChanged.connect(self.filterchange)
+        self.check_filter1.clicked.connect(self.filterchange)
         self.filter_image1.setScaledContents(True)
 
         # dicom page
@@ -81,17 +82,17 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.sliderchange()  # load the slider brightness settings in, go through update cycle
 
     # $$$$$$$$  functions relating to video editor
-    # def filterchange(self, check=False):
-    #     if self.check_filter1.checkState() == 0:
-    #         TF = False
-    #     else:
-    #         TF = True
-    #     a = self.slider_f_cutoff.value()
-    #     b = self.slider_f_order.value()
-    #     self.CurMov.par = [TF, a, b]
-    #     self.CurMov.getnewbfilter()
-    #     if check is False:
-    #         self.update_all_things()
+    def filterchange(self):
+        if self.check_filter1.checkState() == 0:
+            TF = False
+        else:
+            TF = True
+        a = self.slider_f_cutoff.value()
+        b = self.slider_f_order.value()
+        self.CurMov.parameters['b_filter'] = [TF, a, b]
+        self.CurMov.getnewbfilter()
+        print("cutoff =  " + str(a) + "  order =  " + str(b))
+        self.update_all_things()
 
     def filebrowse_png(self, test=False):
         a = QtWidgets.QFileDialog()
@@ -129,7 +130,7 @@ class BuildUp(gui_full.Ui_MainWindow):
         if self.progress_bar.value() != self.CurMov.currentframe:
             self.progress_bar.setValue(self.CurMov.currentframe)  # edit the progress bar
 
-        qpix, histogram, fft = self.CurMov.return_frame()
+        qpix, histogram, fft, b_filter = self.CurMov.return_frame()
         self.mr_image.setPixmap(qpix)  # set the main image to the current Frame
 
         # histogram time
@@ -138,9 +139,8 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.bargraph = newbar
         self.histogram.addItem(self.bargraph)
         self.fourier_image.setPixmap(fft)
-        # if self.b_filter != b_filter:
-        #     self.filter_image1.setPixmap(b_filter)
-        #     self.b_filter = b_filter
+        self.filter_image1.setPixmap(b_filter)
+
 
     def framechange(self):
         # called when you (or the machine) change the progress bar in the video player
@@ -153,7 +153,7 @@ class BuildUp(gui_full.Ui_MainWindow):
     def sliderchange(self):
         # [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
         paramlist = self.MySliders.getvalue()
-        self.CurMov.parameters['GLS'] = paramlist
+        self.CurMov.parameters['gls'] = paramlist
         self.update_all_things()
 
     def play_button(self):

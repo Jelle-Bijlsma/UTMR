@@ -3,25 +3,33 @@ import matplotlib.pyplot as plt
 
 
 fft = np.empty([370, 370])
-cutoff = 100
-
 x_dim, y_dim = np.shape(fft)
 x_max = x_dim / 2
 y_max = y_dim / 2
 x = np.arange(-x_max, x_max, 1)
 y = np.arange(-y_max, y_max, 1)
-
 X, Y = np.meshgrid(x, y)
 
-xterm = 1/(np.sqrt(1+(X/cutoff)**2))
-yterm = 1/(np.sqrt(1+(Y/cutoff)**2))
 
-Z = (xterm+yterm)/2
-Z = np.fft.ifftshift(Z)
+# # b_filter
+# cutoff = 100
+# xterm = 1/(np.sqrt(1+(X/cutoff)**2))
+# yterm = 1/(np.sqrt(1+(Y/cutoff)**2))
+# Z = (xterm+yterm)/2
+
+# gaussian
+sigx = 40
+sigy = 40
+A = 1
+xterm = (X**2)/(2*sigx**2)
+yterm = (Y**2)/(2*sigy**2)
+Z = A*np.exp(-(xterm + yterm))
+
+# Z = np.fft.ifftshift(Z)
 fig, ax = plt.subplots()
 im = ax.imshow(Z, interpolation='nearest')
 
-a = np.multiply(np.fft.fftshift(Z), Z)
+# a = np.multiply(np.fft.fftshift(Z), Z)
 
 plt.show()
 

@@ -85,6 +85,8 @@ class SliderClass:
     def valueset(self, value):
         for element in self.sliderlist:
             element.setValue(value)
+        for element in self.checklist:
+            element.setChecked(0)
 
     def getvalue(self):
         vallist = []

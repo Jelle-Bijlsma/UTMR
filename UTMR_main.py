@@ -158,9 +158,10 @@ class BuildUp(gui_full.Ui_MainWindow):
     # pause_button is through a lambda function.
 
     def reset_button(self):
-        self.timer.stop()
         self.CurMov.currentframe = 0
         self.My_gls_slider.valueset(0)
+        self.My_b_filter_slider.valueset(0)
+        self.My_g_filter_slider.valueset(0)
         self.update_all_things()
 
     # $$$$$$ functions related to dicom manager

@@ -22,7 +22,8 @@ class FrameClass:
         # main      : the 'main' image shown in the videoplayer
         # fft       : the fourier transform of main
 
-        self.fft_frames = {'main': cfft(frame), 'gls': cfft(frame), 'b_filter_a': cfft(frame)}
+        self.fft_frames = {'main': cfft(frame), 'gls': cfft(frame), 'b_filter_a': cfft(frame),
+                           'g_filter_a': cfft(frame)}
         # fft_frames are similar to frames except for the fact that they are NOT 'uint8'. Convention to have them
         # NOT centered aesthetically.
         # main:      : the fft of the frame
@@ -31,7 +32,7 @@ class FrameClass:
 
         self.histogram = functions.image_process.calc_hist(self.frames['original'])
 
-        self.isvalid = {'histogram': False}
+        self.isvalid = {'histogram': False, 'b_filter': False, 'g_filter': False}
 
         self.parameters = {'gls': [0, 0, 0, 0], 'shape': frame.shape}
         # the parameters can be explained as follows
@@ -64,13 +65,16 @@ class FrameClass:
         self.isvalid['histogram'] = False  # after gls we need to recalculate the histogram.
         print("gls calc")
 
-    def return_info(self, gls_p, bool_b_filter, b_filter):
+    def return_info(self, gls_p, bool_b_filter, b_filter, bool_g_filter, g_filter):
         # always do a gls check first. It is the base on which the rest runs.
         self.calc_gls(gls_p)
-
+        self.isvalid['b_filter'] = bool_b_filter
+        self.isvalid['g_filter'] = bool_g_filter
         if bool_b_filter is True:
             self.calc_bfilter(b_filter)
-        else:
+        if bool_g_filter is True:
+            self.calc_gfilter(g_filter)
+        if (bool_g_filter is False) & (bool_b_filter is False):
             self.qpix['fft'] = cfft(self.frames['gls'], qpix=True)
 
         if self.isvalid['histogram'] is False:
@@ -87,7 +91,17 @@ class FrameClass:
         self.qpix['main'] = cqpx(after_b_filter)
         self.qpix['fft'] = cqpx(functions.image_process.prep_fft(self.fft_frames['b_filter_a']))
 
-
+    def calc_gfilter(self, g_filter):
+        if self.isvalid['b_filter']:
+            prev_frame = self.fft_frames['b_filter_a']
+        else:
+            prev_frame = self.fft_frames['gls']
+        self.fft_frames['g_filter_a'] = np.multiply(prev_frame, np.fft.fftshift(g_filter))
+        after_g_filter = np.fft.ifft2(self.fft_frames['g_filter_a'])
+        # this is a FFT, which is shifted. dtype = float
+        self.isvalid['histogram'] = False
+        self.qpix['main'] = cqpx(after_g_filter)
+        self.qpix['fft'] = cqpx(functions.image_process.prep_fft(self.fft_frames['g_filter_a']))
 
     # def calc_bfilter(self, filter, filterparams):
     #     if np.array_equal(filter, self.filter_b):

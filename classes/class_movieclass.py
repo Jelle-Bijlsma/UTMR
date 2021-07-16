@@ -9,12 +9,13 @@ class MovieClass:
         self.currentframe = 0
         self.maxframes = int
         self.framelist = []
-        self.parameters = {'gls': [0, 0, 0, 0], 'b_filter': [False, 1, 0], 'shape': (0, 0)}
+        self.parameters = {'gls': [0, 0, 0, 0], 'b_filter': [False, 1, 0], 'shape': (0, 0),
+                           'g_filter': [False, 0, 0]}
         # the parameters can be explained as follows
         # gls:          brightness[0] boost[1]  lbound[2]  rbound[3]
         # b_filter:     on/off [0] cutoff [1] order [2]
         # shape:        size of the frames (x,y)
-        self.filters = {'b_filter': np.array([])}
+        self.filters = {'b_filter': np.array([]), 'g_filter': np.array([])}
         self.qpix = {'b_filter': cqpx(np.array([])), 'g_filter': cqpx(np.array([]))}
 
     def create_frameclass(self, imlist):
@@ -37,7 +38,8 @@ class MovieClass:
         print("return called")
         print(self.parameters['gls'])
         cframe = self.framelist[self.currentframe]  # cframe for [c]urrent frame
-        cframe.return_info(self.parameters['gls'], self.parameters['b_filter'][0], self.filters['b_filter'])
+        cframe.return_info(self.parameters['gls'], self.parameters['b_filter'][0], self.filters['b_filter'],
+                           self.parameters['g_filter'][0], self.filters['g_filter'])
         return cframe.qpix['main'], cframe.histogram, cframe.qpix['fft'], self.qpix['b_filter'], self.qpix['g_filter']
 
     def getnewbfilter(self):

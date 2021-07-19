@@ -1,3 +1,4 @@
+import cv2
 import numpy as np
 
 import functions.auxiliary
@@ -102,6 +103,9 @@ class FrameClass:
         self.isvalid['histogram'] = False
         self.qpix['main'] = cqpx(after_g_filter)
         self.qpix['fft'] = cqpx(functions.image_process.prep_fft(self.fft_frames['g_filter_a']))
+
+    #def calc_sobel(self):
+     #   cv2.Sobel(src=
 
     # def calc_bfilter(self, filter, filterparams):
     #     if np.array_equal(filter, self.filter_b):

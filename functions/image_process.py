@@ -18,6 +18,21 @@ def butter_filter(shape: tuple, cutoff: int, order: int):
     return Z
 
 
+def gaus_filter(shape: tuple, a: float, sigx, sigy):
+    x_dim, y_dim = shape
+    x_max = x_dim / 2
+    y_max = y_dim / 2
+    x = np.arange(-x_max, x_max, 1)
+    y = np.arange(-y_max, y_max, 1)
+
+    X, Y = np.meshgrid(x, y)
+
+    xterm = (X ** 2) / (2 * sigx ** 2)
+    yterm = (Y ** 2) / (2 * sigy ** 2)
+    Z = (a/100) * np.exp(-(xterm + yterm))
+    return Z
+
+
 def change_qpix(frame: np.array([])):
     # takes a frame and transforms it into qpix format. can take all datatypes.
     x = frame.shape

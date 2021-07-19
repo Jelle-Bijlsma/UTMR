@@ -17,7 +17,7 @@ X, Y = np.meshgrid(x, y)
 # yterm = 1/(np.sqrt(1+(Y/cutoff)**2))
 # Z = (xterm+yterm)/2
 
-# gaussian
+# gaussian #grindset
 sigx = 40
 sigy = 40
 A = 1

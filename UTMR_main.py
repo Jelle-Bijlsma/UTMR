@@ -1,18 +1,21 @@
-import sys
 import os
+import sys
+
+import pyqtgraph as pg
 from PyQt5 import QtCore, QtGui, QtWidgets
-from QT_Gui import gui_full
-import functions.auxiliary
+
+import classes.class_extra
 import classes.class_frameclass
 import classes.class_movieclass
-import classes.class_extra
-import pyqtgraph as pg
+import functions.auxiliary
+from QT_Gui import gui_full
 
 
 # the whole thing is just existing within this class.
 class BuildUp(gui_full.Ui_MainWindow):
     def __init__(self):
         super().__init__()
+        self.setupUi(MainWindow)
         # initialize timer video player. timer is started in the self.play_button
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.next_frame)
@@ -24,25 +27,29 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.CurMov = classes.class_movieclass.MovieClass()
         self.histogramx = list(range(0, 255))  # the x-range of the histogram
         self.bargraph = pg.BarGraphItem()  # the histogram widget inside plotwidget (which is called self.histogram)
-        self.b_filter = []
-
-    def setup_ui2(self):
-        # this is setting up the GUI more. More convenient here than in QT designer.
-        # For some reason doesnt work when put in __init__
         self.check_filter1.setChecked(1)
-        sliderlist = [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
-        line_editlist = [self.lineEdit_Brightness, self.lineEdit_Boost, self.lineEdit_Lbound, self.lineEdit_Rbound]
-        self.MySliders = classes.class_extra.SliderClass(sliderlist, line_editlist)
+
+        # create
+        gls_sliderlist = [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
+        gls_line_editlist = [self.lineEdit_Brightness, self.lineEdit_Boost, self.lineEdit_Lbound, self.lineEdit_Rbound]
+        self.My_gls_slider = classes.class_extra.SliderClass(gls_sliderlist, gls_line_editlist, self.sliderchange)
+
+        b_filter_sliderlist = [self.slider_f_cutoff, self.slider_f_order]
+        b_filter_line_editlist = [self.lineEdit_f_cutoff, self.lineEdit_f_order]
+        self.My_b_filter_slider = classes.class_extra.SliderClass(b_filter_sliderlist, b_filter_line_editlist,
+                                                                  self.b_filterchange, [self.check_filter1])
+
+        g_filter_sliderlist = [self.slider_g_size, self.slider_g_sigX, self.slider_g_sigY]
+        g_filter_line_editlist = [self.lineEdit_g_size, self.lineEdit_g_sigx, self.lineEdit_g_sigY]
+        self.My_g_filter_slider = classes.class_extra.SliderClass(g_filter_sliderlist, g_filter_line_editlist,
+                                                                  self.g_filterchange, [self.check_filter_g])
 
         # load pictures in
         self.mr_image.setPixmap(QtGui.QPixmap("./QT_Gui/images/baseimage.png"))
-        self.mr_image.setScaledContents(True)
         self.label_logo_uni.setPixmap((QtGui.QPixmap("./QT_Gui/images/UTlogo.png")))
-        self.label_logo_uni.setScaledContents(True)
-        self.fourier_image.setScaledContents(True)
 
         # self.stackedWidget.setCurrentIndex(0)  # initialize to homepage
-        self.stackedWidget.setCurrentIndex(1)  # initialize to homepage
+        self.stackedWidget.setCurrentIndex(1)  # initialize to video-edit-page
 
         # home page
         self.button_2dicom.clicked.connect(lambda: self.stackedWidget.setCurrentIndex(2))
@@ -56,16 +63,6 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.pb_reset.clicked.connect(self.reset_button)
         self.pb_play.clicked.connect(self.play_button)
         self.pb_pause.clicked.connect(lambda: self.timer.stop())
-        # sliders
-        self.slider_brightness.valueChanged.connect(self.sliderchange)
-        self.slider_boost.valueChanged.connect(self.sliderchange)
-        self.slider_Lbound.valueChanged.connect(self.sliderchange)
-        self.slider_Rbound.valueChanged.connect(self.sliderchange)
-        # filter 1
-        self.slider_f_cutoff.valueChanged.connect(self.filterchange)
-        self.slider_f_order.valueChanged.connect(self.filterchange)
-        self.check_filter1.clicked.connect(self.filterchange)
-        self.filter_image1.setScaledContents(True)
 
         # dicom page
         self.pb_convert.clicked.connect(self.convert)
@@ -82,16 +79,14 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.sliderchange()  # load the slider brightness settings in, go through update cycle
 
     # $$$$$$$$  functions relating to video editor
-    def filterchange(self):
-        if self.check_filter1.checkState() == 0:
-            TF = False
-        else:
-            TF = True
-        a = self.slider_f_cutoff.value()
-        b = self.slider_f_order.value()
-        self.CurMov.parameters['b_filter'] = [TF, a, b]
+    def b_filterchange(self):
+        self.CurMov.parameters['b_filter'] = self.My_b_filter_slider.getvalue()
         self.CurMov.getnewbfilter()
-        print("cutoff =  " + str(a) + "  order =  " + str(b))
+        self.update_all_things()
+
+    def g_filterchange(self):
+        self.CurMov.parameters['g_filter'] = self.My_g_filter_slider.getvalue()
+        self.CurMov.getnewgfilter()
         self.update_all_things()
 
     def filebrowse_png(self, test=False):
@@ -130,9 +125,9 @@ class BuildUp(gui_full.Ui_MainWindow):
         if self.progress_bar.value() != self.CurMov.currentframe:
             self.progress_bar.setValue(self.CurMov.currentframe)  # edit the progress bar
 
-        qpix, histogram, fft, b_filter = self.CurMov.return_frame()
+        qpix, histogram, fft, b_filter, g_filter = self.CurMov.return_frame()
         self.mr_image.setPixmap(qpix)  # set the main image to the current Frame
-
+        self.filter_image_g.setPixmap(g_filter)
         # histogram time
         newbar = pg.BarGraphItem(x=self.histogramx, height=histogram, width=5, brush='g')
         self.histogram.clear()
@@ -140,7 +135,6 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.histogram.addItem(self.bargraph)
         self.fourier_image.setPixmap(fft)
         self.filter_image1.setPixmap(b_filter)
-
 
     def framechange(self):
         # called when you (or the machine) change the progress bar in the video player
@@ -152,8 +146,7 @@ class BuildUp(gui_full.Ui_MainWindow):
 
     def sliderchange(self):
         # [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
-        paramlist = self.MySliders.getvalue()
-        self.CurMov.parameters['gls'] = paramlist
+        self.CurMov.parameters['gls'] = self.My_gls_slider.getvalue()
         self.update_all_things()
 
     def play_button(self):
@@ -165,9 +158,10 @@ class BuildUp(gui_full.Ui_MainWindow):
     # pause_button is through a lambda function.
 
     def reset_button(self):
-        self.timer.stop()
         self.CurMov.currentframe = 0
-        self.MySliders.valueset(0)
+        self.My_gls_slider.valueset(0)
+        self.My_b_filter_slider.valueset(0)
+        self.My_g_filter_slider.valueset(0)
         self.update_all_things()
 
     # $$$$$$ functions related to dicom manager
@@ -261,11 +255,6 @@ if __name__ == "__main__":
     # chad no argument vs virgin sys.argv
     app = QtWidgets.QApplication([])
     MainWindow = QtWidgets.QMainWindow()
-    # class creation
     ui = BuildUp()
-    # create an instance of Ui_MainWindow
-    # fill in the instance into the setup function ?
-    ui.setupUi(MainWindow)  # if i move this function into the __init__ i think I can get rid of the second setup_ui
-    ui.setup_ui2()
     MainWindow.show()
     sys.exit(app.exec_())

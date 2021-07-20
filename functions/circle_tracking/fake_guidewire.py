@@ -1,7 +1,9 @@
 import cv2
 import numpy as np
+from scipy.interpolate import interp1d
+from scipy import interpolate
 
-# draw 10 random circles in an image. The
+import matplotlib.pyplot as plt
 
 window_name = 'Image'
 radius = 10
@@ -14,6 +16,15 @@ seed_x = np.random.randint(50, 450)
 seed_y = np.random.randint(50, 100)
 coordinates = [seed_x, seed_y]
 
+dp = 45 / 25
+minDist = 11
+param1 = 35 / 10
+param2 = 22
+minradius = 10
+maxradius = 15
+
+def grabfirst(alist: list, integer: int):
+    return [item[integer] for item in alist]
 
 
 while True:
@@ -35,26 +46,75 @@ while True:
         # print(abc[0])
         # image = cv2.circle(img=image, center=abc, radius=radius, color=255, thickness=thickness)
         image = cv2.circle(img=image, center=coordinates, radius=radius, color=255, thickness=thickness)
-        row, col = image.shape
-        mean = 0
-        var = 0.1
-        sigma = var ** 0.5
-        gauss = np.random.normal(mean, sigma, (row, col))
-        gauss = gauss.reshape(row, col)
-        noisy = np.ndarray.astype(gauss, 'uint8')
-        image += noisy
-        print(type(image))
-        image = np.ndarray.astype(image,'uint8')
-        print(type(image))
-        blur = cv2.GaussianBlur(noisy, (5, 5), 0)
-        image = np.ndarray.astype(blur,'uint8')
 
+
+
+    size = (10, 10)
+    image = np.transpose(cv2.blur(image, size))
+    # cv2.imshow("output", image)
     output = image.copy()
-    circles = cv2.HoughCircles(image, cv2.HOUGH_GRADIENT, 4, 20, minRadius=5, maxRadius=15)
+    cv2.waitKey(0)
+    circles = cv2.HoughCircles(image, cv2.HOUGH_GRADIENT, dp=dp, minDist=minDist, param1=param1, param2=param2,
+                               minRadius=minradius, maxRadius=maxradius)
     print(circles)
-    # ensure at least some circles were found
+    x = circles[0,:,0]
+    x = np.reshape(x, [len(x), 1])
+    print(x)
+    y = circles[0,:,1]
+    y = np.reshape(y, [len(y), 1])
+    print(y)
+
+    conlist = np.concatenate([x,y],axis=1)
+    #print(conlist)
+
+    mysort = sorted(conlist, key=lambda p: p[0])
+    #print(mysort)
+    x = grabfirst(mysort, 0)
+    y = grabfirst(mysort, 1)
+
+    f = interp1d(x, y)
+    f2 = interp1d(x, y, kind='cubic')
+    tck = interpolate.splrep(x, y, s=10)
+    xnew = np.linspace(np.min(x), np.max(x), num=60, endpoint=True)
+    spl = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
+    spl.set_smoothing_factor(0.5)
+    xnew2 = np.linspace(np.min(x)-20, np.max(x)+20, num=60, endpoint=True)
+    ynew2 = spl(xnew2)
+
+    coords = np.array([[]])
+
+    pcr = False
+    for x,y in zip(xnew2,ynew2):
+        if pcr is True:
+            small = np.concatenate([small,np.array([[x,y]])])
+        else:
+            small = np.array([[x,y]])
+            pcr = True
+        # coords = np.concatenate([coords,small])
+        # print(coords)
+
+    thelist = np.round(small)
+
+    pcr = False
+    for element in thelist:
+        if pcr is True:
+            lineting = (int(lineting[0]), int(lineting[1]))
+            elementa = (int(element[0]), int(element[1]))
+            print(type(lineting))
+            cv2.line(img=output,pt1=lineting,pt2=elementa,color=255,thickness=5)
+            lineting = element
+        else:
+            lineting = element
+            pcr = True
+
+    # ynew = interpolate.splev(xnew, tck, der=0)
+    #
+    # plt.plot(x, y, 'o', xnew, f(xnew), '-', xnew, f2(xnew), '--', xnew, ynew, 'x')
+    # plt.plot(x, y, 'o', xnew, f(xnew), '-', xnew, f2(xnew), '--', xnew2, spl(xnew2), 'x')
+    # plt.legend(['data', 'linear', 'cubic', 'cubic_spline'], loc='best')
+    # plt.show()
+
     if circles is not None:
-        print("hey")
         # convert the (x, y) coordinates and radius of the circles to integers
         circles = np.round(circles[0, :]).astype("int")
         # loop over the (x, y) coordinates and radius of the circles
@@ -64,8 +124,9 @@ while True:
             cv2.circle(output, (x, y), r, 255, 4)
             # cv2.rectangle(output, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
         # show the output image
+
         cv2.imshow("output", np.hstack([image, output]))
         cv2.waitKey(0)
-
+    #
 
 

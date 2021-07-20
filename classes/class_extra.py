@@ -73,20 +73,28 @@ class Worker1(QtCore.QRunnable):
 
 class SliderClass:
     def __init__(self, slides, line_edits, function, checklist=None):
-        # Order of 'slides' is important for use is the initial brightness section. Could maybe improve this
-        # by using key value pairs?
+        # Usecase of thsi class. Many specific sliders, lineEdits and checkboxes are used together. Instead of
+        # 'hard-coding' all these things, using the SliderClass Class gives some ease of programming
+
+        # Order of 'slides' is important. Could maybe improve this?
         if checklist is None:
             checklist = []
+        # the lists contain all the sliders, lineEdits and checkboxes used for a specific group.
         self.sliderlist = slides
         self.line_editlist = line_edits
         self.checklist = checklist
+        # .setfun takes a function as argument and connects the valueChanged signal to it for every element
+        # in the sliderlist and the clicked.connect to every element in the checklist.
         self.setfun(function)
 
     def valueset(self, value):
+        # sets the value of the slider to a specific value. Currently only used when resetting the sliders.
+        # could later be used to load in parameters from a previously saved session for example.
         for element in self.sliderlist:
             element.setValue(value)
         for element in self.checklist:
-            element.setChecked(0)
+            if value == 0:
+                element.setChecked(0)
 
     def getvalue(self):
         vallist = []

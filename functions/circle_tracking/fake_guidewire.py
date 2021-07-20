@@ -10,10 +10,10 @@ dx = 50
 dy = 50
 border = [0, 500]
 
-
 seed_x = np.random.randint(50, 450)
 seed_y = np.random.randint(50, 100)
 coordinates = [seed_x, seed_y]
+
 
 
 while True:
@@ -35,9 +35,22 @@ while True:
         # print(abc[0])
         # image = cv2.circle(img=image, center=abc, radius=radius, color=255, thickness=thickness)
         image = cv2.circle(img=image, center=coordinates, radius=radius, color=255, thickness=thickness)
+        row, col = image.shape
+        mean = 0
+        var = 0.1
+        sigma = var ** 0.5
+        gauss = np.random.normal(mean, sigma, (row, col))
+        gauss = gauss.reshape(row, col)
+        noisy = np.ndarray.astype(gauss, 'uint8')
+        image += noisy
+        print(type(image))
+        image = np.ndarray.astype(image,'uint8')
+        print(type(image))
+        blur = cv2.GaussianBlur(noisy, (5, 5), 0)
+        image = np.ndarray.astype(blur,'uint8')
 
     output = image.copy()
-    circles = cv2.HoughCircles(image, cv2.HOUGH_GRADIENT, 4, 20,)
+    circles = cv2.HoughCircles(image, cv2.HOUGH_GRADIENT, 4, 20, minRadius=5, maxRadius=15)
     print(circles)
     # ensure at least some circles were found
     if circles is not None:
@@ -48,10 +61,11 @@ while True:
         for (x, y, r) in circles:
             # draw the circle in the output image, then draw a rectangle
             # corresponding to the center of the circle
-            cv2.circle(output, (x, y), r, (0, 255, 0), 4)
-            cv2.rectangle(output, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
+            cv2.circle(output, (x, y), r, 255, 4)
+            # cv2.rectangle(output, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
         # show the output image
         cv2.imshow("output", np.hstack([image, output]))
         cv2.waitKey(0)
+
 
 

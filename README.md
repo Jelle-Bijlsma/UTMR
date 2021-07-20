@@ -7,6 +7,8 @@ Currently it is a little bit less of a mess, and more information will be added.
 ### setup
 UTMR_main.py is the main event handler. It imports:
 
+(and a lot more, update this soon)
+
 * PyQt5
 * CV2
 * sys (native)
@@ -37,12 +39,16 @@ called from the event handler to iterate through the `framelist`
 
 
 ## known issues
+!! Using pycharm, whitin the virtual environment, the folder "./lib/python3.8/cv2/qt"
+has to be renamed. I am not quite sure why, however this works. It seems  something breaks when using QT5
+in conjuction with CV2.
+
 If you dont have 4k resolution tough luck.
 
 Menu buttons are suboptimal
 
 video editor:
-* 90% of the buttons do not work
+* 20% of the buttons do not work
 
 ## could be fixed:
 dicom editor:d

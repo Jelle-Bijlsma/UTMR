@@ -8,7 +8,9 @@ import classes.class_extra
 import classes.class_frameclass
 import classes.class_movieclass
 import functions.auxiliary
+import functions.circle_tracking.circle_finder
 from QT_Gui import gui_full
+from functions.image_process import change_qpix as cqpx
 
 
 # the whole thing is just existing within this class.
@@ -29,7 +31,7 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.bargraph = pg.BarGraphItem()  # the histogram widget inside plotwidget (which is called self.histogram)
         self.check_filter1.setChecked(1)
 
-        # create
+        # create sliderlists!
         gls_sliderlist = [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
         gls_line_editlist = [self.lineEdit_Brightness, self.lineEdit_Boost, self.lineEdit_Lbound, self.lineEdit_Rbound]
         self.My_gls_slider = classes.class_extra.SliderClass(gls_sliderlist, gls_line_editlist, self.sliderchange)
@@ -43,6 +45,13 @@ class BuildUp(gui_full.Ui_MainWindow):
         g_filter_line_editlist = [self.lineEdit_g_size, self.lineEdit_g_sigx, self.lineEdit_g_sigY]
         self.My_g_filter_slider = classes.class_extra.SliderClass(g_filter_sliderlist, g_filter_line_editlist,
                                                                   self.g_filterchange, [self.check_filter_g])
+
+        circle_finder_sliderlist = [self.slider_dp, self.slider_mindist, self.slider_param1, self.slider_param2,
+                                    self.slider_minradius, self.slider_maxradius]
+        circle_finder_line_editlist = [self.lineEdit_dp, self.lineEdit_minDist, self.lineEdit_param1,
+                                       self.lineEdit_param2, self.lineEdit_minradius, self.lineEdit_maxradius]
+        self.My_circlefinder_slider = classes.class_extra.SliderClass(circle_finder_sliderlist,
+                                                                      circle_finder_line_editlist, self.circle_find)
 
         # load pictures in
         self.mr_image.setPixmap(QtGui.QPixmap("./QT_Gui/images/baseimage.png"))
@@ -73,6 +82,10 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.actionMain.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(0))
         self.actionImage_processing.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(1))
         self.actionDicom_Edit.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(2))
+        self.actionCircle_Tracking.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(3))
+
+        # circle finder
+        self.pb_newim.clicked.connect(self.circle_newim)
 
         # test (also very important)
         self.filebrowse_png(True)  # load in all images and go through update cycle
@@ -249,6 +262,21 @@ class BuildUp(gui_full.Ui_MainWindow):
                                   dcm2pngworker.png2avi(a, b, c))
 
         dcm2pngworker.signals.videodone.connect(lambda: self.txtbox_cmd.append("video conversion done"))
+
+    # $$$$$$ functions related to circle finder
+    def circle_newim(self):
+        self.circim = functions.circle_tracking.circle_finder.new()
+        self.label_imcircle.setPixmap(cqpx(self.circim))
+        self.circle_find()
+
+    def circle_find(self):
+        if self.circim is None:
+            self.circle_newim()
+        parameters = self.My_circlefinder_slider.getvalue()
+        # self.circim = functions.circle_tracking.circle_finder.random_noise(self.circim, 'gaussian', mean=0.1,
+        #                                                                   var=0.01)
+        img = functions.circle_tracking.circle_finder.update(self.circim, parameters)
+        self.label_imcircle.setPixmap(cqpx(img))
 
 
 if __name__ == "__main__":

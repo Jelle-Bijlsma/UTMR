@@ -1,130 +1,108 @@
 import cv2
 import numpy as np
-from scipy.interpolate import interp1d
 from scipy import interpolate
 
+""""
+The file which is responsible for the circle finding functions. Generates random circles and then
+gaussian noise + blur. Then it uses hough transform to find the circles, and uses a quadratic spline to
+fit a line through them.  
+"""
 
-window_name = 'Image'
+# variables used circle generation
 radius = 10
 thickness = 2
-dx = 50
-dy = 50
+dx = 50  # pixel distance with which the x-pos can change gradually
+dy = 50  # pixel distance with which the y-pos can change gradually
 border = [0, 500]
 
+# noise variables
+size = (10, 10)
+mean = 0
+var = 0.1
+sigma = var ** 0.5
 
-# three functions: new, find, show
-# 'new' creates an image of a new set of circles
-# 'find' creates an image with the found images from new
-# 'show' shows whatever image
 
-def grabfirst(alist: list, integer: int):
-    return [item[integer] for item in alist]
-
-# draw 10 random circles in an image.
 def new():
+    # function draws 10 procedural circles in an image. Adds noise and gaussian blur.
     image = np.zeros([500, 500], np.uint8)
+    # creates a bounding box for initial circle to spawn. caution: the image gets rotated 90 deg, so x and y are
+    # switched in final presentation. This is due to spline not being happy with overlapping x values.
     seed_x = np.random.randint(50, 450)
     seed_y = np.random.randint(50, 100)
-
     coordinates = [seed_x, seed_y]
 
     for element in range(1, 10):
         coord_add_x = np.random.randint(-dx, dy)
-        coord_add_y = np.random.randint(20, dy)
+        coord_add_y = np.random.randint(20, dy)  # set to 20 min to prevent circles from overlapping
         coord_add = np.stack((coord_add_x, coord_add_y))
-        coordinates = [sum(x) for x in zip(coordinates, coord_add)]
+        coordinates = np.add(coordinates, coord_add)
         image = cv2.circle(img=image, center=coordinates, radius=radius, color=255, thickness=thickness)
 
-        # print(type(image))
-        # image = np.ndarray.astype(image,'uint8')
-        # print(type(image))
-        # blur = cv2.GaussianBlur(noisy, (3, 3), 1)
-        # image = np.ndarray.astype(blur,'uint8')
-
-    size = (10, 10)
-    image = cv2.blur(image, size)
+    image = cv2.blur(image, size)  # add blur
     row, col = image.shape
-    mean = 0
-    var = 0.1
-    sigma = var ** 0.5
 
-    for element in range(0,4):
+    for element in range(0, 4):
+        # add 4 instances of gaussian blur
         gauss = np.random.normal(mean, sigma, (row, col))
         gauss = gauss.reshape(row, col)
         noisy = np.ndarray.astype(gauss, 'uint8')
         image += noisy
 
-    return image
+    return image  # end of function
 
 
 def update(image, parameters):
-    dp = parameters[0]/25
+    # update function finds the circles in image, given the hough parameters in list form.
+    dp = parameters[0] / 25  # since PyQt does not allow for non int slider values, they have to be created.
     minDist = parameters[1]
-    param1 = parameters[2]/10
+    param1 = parameters[2] / 10
     param2 = parameters[3]
     minradius = parameters[4]
     maxradius = parameters[5]
+    # image gets rotated 90 deg because of earlier mentioned spline problems.
     image = np.transpose(image)
-    output = image.copy()
-
-
+    output = image.copy()  # keep a copy of image to be used later in stacking.
+    # circles is a list of all the positions of circles it could find including their radius
+    # [[x0,y0,r0]
+    #  [x1,y1,r1]] etc
     circles = cv2.HoughCircles(image, cv2.HOUGH_GRADIENT, dp=dp, minDist=minDist, param1=param1, param2=param2,
                                minRadius=minradius, maxRadius=maxradius)
-    print(circles.shape)
-
-    print(circles)
-    x = circles[0,:,0]
-    x = np.reshape(x, [len(x), 1])
-    print(x)
-    y = circles[0,:,1]
-    y = np.reshape(y, [len(y), 1])
-    print(y)
-
-    conlist = np.concatenate([x,y],axis=1)
-    #print(conlist)
-
-    mysort = sorted(conlist, key=lambda p: p[0])
-    #print(mysort)
-    x = grabfirst(mysort, 0)
-    y = grabfirst(mysort, 1)
-
-    f = interp1d(x, y)
-    f2 = interp1d(x, y, kind='cubic')
-    tck = interpolate.splrep(x, y, s=10)
-    xnew = np.linspace(np.min(x), np.max(x), num=60, endpoint=True)
-    spl = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
-    spl.set_smoothing_factor(0.5)
-    xnew2 = np.linspace(np.min(x)-20, np.max(x)+20, num=60, endpoint=True)
-    ynew2 = spl(xnew2)
-
-    coords = np.array([[]])
-
-    pcr = False
-    for x,y in zip(xnew2,ynew2):
-        if pcr is True:
-            small = np.concatenate([small,np.array([[x,y]])])
-        else:
-            small = np.array([[x,y]])
-            pcr = True
-        # coords = np.concatenate([coords,small])
-        # print(coords)
-
-    thelist = np.round(small)
-
-    pcr = False
-    for element in thelist:
-        if pcr is True:
-            lineting = (int(lineting[0]), int(lineting[1]))
-            elementa = (int(element[0]), int(element[1]))
-            print(type(lineting))
-            cv2.line(img=output,pt1=lineting,pt2=elementa,color=255,thickness=5)
-            lineting = element
-        else:
-            lineting = element
-            pcr = True
-
-
     if circles is not None:
+        # since the hough detects the circles randomly, we have the need to sort them in ascending order
+        # for the spline to work
+        conlist = circles[0, :, 0:2]
+        mysort = sorted(conlist, key=lambda p: p[0])
+        mysort = np.array(mysort)
+        x = mysort[:, 0]
+        y = mysort[:, 1]
+        # create spline
+        spl = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
+        spl.set_smoothing_factor(0.5)
+        # by creating a dense line grid to plot the spline over, we get smooth output
+        xnew2 = np.linspace(np.min(x) - 20, np.max(x) + 20, num=60, endpoint=True)
+        ynew2 = spl(xnew2)
+
+        # this construction turns the separate xnew2 and ynew2 into an array of like this:
+        # [[x0, y0]
+        # [x1, y1]] etc..
+        thelist = np.array([[x, y] for x, y in zip(xnew2, ynew2)], dtype="int")
+
+        # we now want to round the list, to make them into accessible pixel values for plotting.
+        # by drawing straight lines between each pixel value, we can recreate the spline in an image.
+        firsthit = False
+        lineting = []  # keeps pycharm happy
+        for element in thelist:
+            if firsthit is True:
+                # drawing the line takes int's in tuple form.
+                lineting = (lineting[0], lineting[1])
+                elementa = (element[0], element[1])
+                cv2.line(img=output, pt1=lineting, pt2=elementa, color=255, thickness=5)
+                lineting = element
+            else:
+                lineting = element
+                firsthit = True
+
+        # we draw the circles where we found them.
         # convert the (x, y) coordinates and radius of the circles to integers
         circles = np.round(circles[0, :]).astype("int")
         # loop over the (x, y) coordinates and radius of the circles
@@ -132,30 +110,5 @@ def update(image, parameters):
             # draw the circle in the output image, then draw a rectangle
             # corresponding to the center of the circle
             cv2.circle(output, (x, y), r, 125, 4)
-            # cv2.rectangle(output, (x - 5, y - 5), (x + 5, y + 5), (0, 128, 255), -1)
 
-    return np.hstack([image, output])
-
-
-def random_noise(image, mode='gaussian', seed=None, clip=True, **kwargs):
-    mode = mode.lower()
-    if image.min() < 0:
-        low_clip = -1
-    else:
-        low_clip = 0
-    if seed is None:
-        np.random.seed(seed=seed)
-
-    if mode == 'gaussian':
-
-        # https://stackoverflow.com/questions/54380447/error-using-houghcircles-with-3-channel-input
-        noise = np.random.normal(kwargs['mean'], kwargs['var'] ** 0.5,
-                                 image.shape)
-        noise = np.ndarray.astype(noise, dtype='uint8')
-        out = image + noise
-        print(out.shape)
-        print(out.dtype)
-    if clip:
-        out = np.clip(out, low_clip, 1.0)
-
-    return out
+    return np.vstack([image, output])

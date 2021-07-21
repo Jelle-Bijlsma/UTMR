@@ -1,7 +1,7 @@
 import numpy as np
 import classes.class_frameclass
-import functions.image_process
-from functions.image_process import change_qpix as cqpx
+import functions.image_processing.image_process
+from functions.image_processing.image_process import change_qpix as cqpx
 
 
 class MovieClass:
@@ -44,12 +44,15 @@ class MovieClass:
 
     def getnewbfilter(self):
         # the filter is 'good looking' meaning it is centered aesthetically.
-        self.filters['b_filter'] = functions.image_process.butter_filter(
+        self.filters['b_filter'] = functions.image_processing.image_process.butter_filter(
             self.parameters['shape'], self.parameters['b_filter'][1], self.parameters['b_filter'][2])
         self.qpix['b_filter'] = cqpx(self.filters['b_filter'])
 
     def getnewgfilter(self):
-        self.filters['g_filter'] = functions.image_process.gaus_filter(
+        self.filters['g_filter'] = functions.image_processing.image_process.gaus_filter(
             self.parameters['shape'], self.parameters['g_filter'][1], self.parameters['g_filter'][2],
             self.parameters['g_filter'][3])
         self.qpix['g_filter'] = cqpx(self.filters['g_filter'])
+
+    def qimtest(self):
+        return self.framelist[self.currentframe].calc_sobel()

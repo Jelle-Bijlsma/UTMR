@@ -2,10 +2,11 @@ import cv2
 import numpy as np
 
 import functions.auxiliary
-import functions.image_process
-from functions.image_process import change_qpix as cqpx
-from functions.image_process import calc_fft as cfft
-from functions.image_process import float_uint8 as flui8
+import functions.image_processing.image_process
+from functions.image_processing.image_process import change_qpix as cqpx
+from functions.image_processing.image_process import calc_fft as cfft
+import copy
+from PyQt5 import QtGui
 
 class FrameClass:
     def __init__(self, frame: np.array):
@@ -31,7 +32,7 @@ class FrameClass:
         # gls        : fft of the gls
         # b_filter_a : fft of gls after filtering with b_filter
 
-        self.histogram = functions.image_process.calc_hist(self.frames['original'])
+        self.histogram = functions.image_processing.image_process.calc_hist(self.frames['original'])
 
         self.isvalid = {'histogram': False, 'b_filter': False, 'g_filter': False}
 
@@ -80,7 +81,7 @@ class FrameClass:
 
         if self.isvalid['histogram'] is False:
             # since histogram has no inherent parameters we do a check against a manual one to avoid over-calculation.
-            self.histogram = functions.image_process.calc_hist(self.frames['gls'])
+            self.histogram = functions.image_processing.image_process.calc_hist(self.frames['gls'])
             self.isvalid['histogram'] = True
 
     def calc_bfilter(self, b_filter):
@@ -90,7 +91,7 @@ class FrameClass:
         # this is a FFT, which is shifted. dtype = float
         self.isvalid['histogram'] = False
         self.qpix['main'] = cqpx(after_b_filter)
-        self.qpix['fft'] = cqpx(functions.image_process.prep_fft(self.fft_frames['b_filter_a']))
+        self.qpix['fft'] = cqpx(functions.image_processing.image_process.prep_fft(self.fft_frames['b_filter_a']))
 
     def calc_gfilter(self, g_filter):
         if self.isvalid['b_filter']:
@@ -102,10 +103,72 @@ class FrameClass:
         # this is a FFT, which is shifted. dtype = float
         self.isvalid['histogram'] = False
         self.qpix['main'] = cqpx(after_g_filter)
-        self.qpix['fft'] = cqpx(functions.image_process.prep_fft(self.fft_frames['g_filter_a']))
+        self.qpix['fft'] = cqpx(functions.image_processing.image_process.prep_fft(self.fft_frames['g_filter_a']))
 
-    #def calc_sobel(self):
-     #   cv2.Sobel(src=
+    def calc_sobel(self):
+        # https://stackoverflow.com/questions/37552924/convert-qpixmap-to-numpy
+        # https://stackoverflow.com/questions/45020672/convert-pyqt5-qpixmap-to-numpy-ndarray
+
+        original_image = cv2.imread("./data/png/correct_video/IM_0011.png", 0)
+        print(original_image.dtype)
+        w,h = np.shape(original_image)
+        Qimage = QtGui.QImage(original_image.data.tobytes(), h, w, h, QtGui.QImage.Format_Indexed8)
+        QPix_OG = QtGui.QPixmap.fromImage(Qimage)
+        print("we doin this")
+        Qimage_return = QtGui.QPixmap.toImage(QPix_OG)
+        # from here we try to make the array
+
+        s = Qimage_return.bits()
+        print(type(s))
+        print(s)
+        s = s.asstring(w*h)
+        print(type(s))
+        new_array = np.fromstring(s, dtype=np.uint8).reshape((h,w))
+
+        new_array = self.qt_image_to_array(Qimage)
+        # print(np.array_equal(new_array,original_image))
+
+        # now that we have the array we can convert it back again
+        Qimage2 = QtGui.QImage(new_array.data.tobytes(), h, w, h, QtGui.QImage.Format_Indexed8)
+        QPix_2 = QtGui.QPixmap.fromImage(Qimage2)
+        #sameqpix = QtGui.QPixmap.toImage(QPix_2)
+        # sameqpix = cqpx(return_image)
+        return QPix_2, QPix_OG
+
+    def qt_image_to_array(self, img: QtGui.QImage, share_memory=False):
+        """ Creates a numpy array from a QImage.
+
+            If share_memory is True, the numpy array and the QImage is shared.
+            Be careful: make sure the numpy array is destroyed before the image,
+            otherwise the array will point to unreserved memory!!
+        """
+        assert isinstance(img, QtGui.QImage), "img must be a QtGui.QImage object"
+        assert img.format() == QtGui.QImage.Format_Indexed8, \
+            "img format must be QImage.Format.Format_RGB32, got: {}".format(img.format())
+
+        img_size = img.size()
+        buffer = img.constBits()  # Returns a pointer to the first pixel data.
+        buffer.setsize(img_size.height()*img_size.width()*8) # the 8 might be 4 if youre not running 64bit
+        # https://stackoverflow.com/questions/3853312/sizeof-void-pointer (OR is it for uint8?)
+        # https://doc.qt.io/qt-5/qimage.html#constBits
+
+        # Sanity check
+        n_bits_buffer = len(buffer)
+        n_bits_image = img_size.width() * img_size.height() * img.depth()
+        assert n_bits_buffer == n_bits_image, \
+            "size mismatch: {} != {}".format(n_bits_buffer, n_bits_image)
+
+        assert img.depth() == 8, "unexpected image depth: {}".format(img.depth())
+
+        # Note the different width height parameter order!
+        arr = np.ndarray(shape=(img_size.height(), img_size.width(), img.depth()//8),
+                         buffer=buffer,
+                         dtype=np.uint8)
+
+        if share_memory:
+            return arr
+        else:
+            return copy.deepcopy(arr)
 
     # def calc_bfilter(self, filter, filterparams):
     #     if np.array_equal(filter, self.filter_b):

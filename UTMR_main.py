@@ -10,7 +10,7 @@ import classes.class_movieclass
 import functions.auxiliary
 import functions.circle_tracking.circle_finder
 from QT_Gui import gui_full
-from functions.image_process import change_qpix as cqpx
+from functions.image_processing.image_process import change_qpix as cqpx
 
 
 # the whole thing is just existing within this class.
@@ -87,9 +87,19 @@ class BuildUp(gui_full.Ui_MainWindow):
         # circle finder
         self.pb_newim.clicked.connect(self.circle_newim)
 
+        #edge filter
+        self.checkBox_sobel.clicked.connect(self.qim_test)
+
         # test (also very important)
         self.filebrowse_png(True)  # load in all images and go through update cycle
         self.sliderchange()  # load the slider brightness settings in, go through update cycle
+
+    def qim_test(self):
+        sameqpix, QPix_OG = self.CurMov.qimtest()
+        self.label_qim_tester.setPixmap(QPix_OG)
+        self.mr_image.setPixmap(sameqpix)
+        # QPix_og = self.CurMov.qimtest()
+        # self.label_qim_tester.setPixmap(QPix_og)
 
     # $$$$$$$$  functions relating to video editor
     def b_filterchange(self):
@@ -273,8 +283,6 @@ class BuildUp(gui_full.Ui_MainWindow):
         if self.circim is None:
             self.circle_newim()
         parameters = self.My_circlefinder_slider.getvalue()
-        # self.circim = functions.circle_tracking.circle_finder.random_noise(self.circim, 'gaussian', mean=0.1,
-        #                                                                   var=0.01)
         img = functions.circle_tracking.circle_finder.update(self.circim, parameters)
         self.label_imcircle.setPixmap(cqpx(img))
 

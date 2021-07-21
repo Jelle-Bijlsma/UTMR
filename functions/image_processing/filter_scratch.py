@@ -1,6 +1,9 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
+""""
+In this file I scratch with filters and do some quick and dirty calculations
+"""
 
 fft = np.empty([370, 370])
 x_dim, y_dim = np.shape(fft)

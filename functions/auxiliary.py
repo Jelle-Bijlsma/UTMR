@@ -4,6 +4,10 @@ from pydicom import dcmread
 import matplotlib.pyplot as plt
 from PyQt5 import QtWidgets
 
+"""
+functions used in the dicom-editor
+"""
+
 
 def png2avi(path: str, fps: int) -> None:
     # them ting be needing PNG

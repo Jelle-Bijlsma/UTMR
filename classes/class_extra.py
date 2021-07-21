@@ -4,8 +4,11 @@ import matplotlib.pyplot as plt
 from PyQt5 import QtCore
 from pydicom import dcmread
 
+"""
+here live all the additional  small classes I'm using
+"""
 
-# here live all the additional  small classes I'm using
+
 class Workersignals(QtCore.QObject):
     # This could be redundant due to an error I made previously.
     # Could incorporate in the Worker1?

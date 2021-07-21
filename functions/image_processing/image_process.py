@@ -1,6 +1,9 @@
 from PyQt5 import QtGui
 import numpy as np
 
+"""
+This file contains all the functions related to the image processing. 
+"""
 
 # def butter_filter(fft, cutoff, order):
 def butter_filter(shape: tuple, cutoff: int, order: int):
@@ -34,6 +37,9 @@ def gaus_filter(shape: tuple, a: float, sigx, sigy):
 
 
 def change_qpix(frame: np.array([])):
+    # some links i might need later
+    # https://gist.github.com/belltailjp/a9538aaf3221f754e5bf
+
     # takes a frame and transforms it into qpix format. can take all datatypes.
     x = frame.shape
     if x == (0,):

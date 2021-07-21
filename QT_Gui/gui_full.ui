@@ -24,7 +24,7 @@
      </rect>
     </property>
     <property name="currentIndex">
-     <number>3</number>
+     <number>1</number>
     </property>
     <widget class="QWidget" name="homepage">
      <widget class="QLabel" name="label_logo_uni">
@@ -1601,7 +1601,7 @@
        <bool>true</bool>
       </property>
      </widget>
-     <widget class="QLabel" name="label_8">
+     <widget class="QLabel" name="label_qim_tester">
       <property name="geometry">
        <rect>
         <x>1150</x>
@@ -5179,6 +5179,15 @@
           <height>21</height>
          </rect>
         </property>
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>5</number>
+        </property>
+        <property name="singleStep">
+         <number>2</number>
+        </property>
         <property name="orientation">
          <enum>Qt::Horizontal</enum>
         </property>
@@ -5219,7 +5228,7 @@
          </rect>
         </property>
         <property name="text">
-         <string>Variable</string>
+         <string>Kernel (S)</string>
         </property>
        </widget>
        <widget class="QLabel" name="label_18">
@@ -5232,7 +5241,7 @@
          </rect>
         </property>
         <property name="text">
-         <string>Variable</string>
+         <string>DST (S)</string>
         </property>
        </widget>
        <widget class="QLabel" name="label_19">
@@ -5245,27 +5254,30 @@
          </rect>
         </property>
         <property name="text">
-         <string>Variable</string>
+         <string>Scale</string>
         </property>
        </widget>
-       <widget class="QCheckBox" name="checkBox_2">
+       <widget class="QCheckBox" name="checkBox_sobel">
         <property name="geometry">
          <rect>
           <x>20</x>
           <y>200</y>
-          <width>92</width>
-          <height>23</height>
+          <width>141</width>
+          <height>81</height>
          </rect>
         </property>
         <property name="text">
          <string>Sobel</string>
+        </property>
+        <property name="checked">
+         <bool>false</bool>
         </property>
        </widget>
        <widget class="QCheckBox" name="checkBox_4">
         <property name="geometry">
          <rect>
           <x>20</x>
-          <y>230</y>
+          <y>570</y>
           <width>92</width>
           <height>23</height>
          </rect>
@@ -5302,6 +5314,61 @@
           <width>41</width>
           <height>25</height>
          </rect>
+        </property>
+       </widget>
+       <widget class="QDial" name="dial">
+        <property name="geometry">
+         <rect>
+          <x>210</x>
+          <y>210</y>
+          <width>50</width>
+          <height>64</height>
+         </rect>
+        </property>
+        <property name="minimum">
+         <number>1</number>
+        </property>
+        <property name="maximum">
+         <number>3</number>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_28">
+        <property name="geometry">
+         <rect>
+          <x>200</x>
+          <y>260</y>
+          <width>16</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>X</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_29">
+        <property name="geometry">
+         <rect>
+          <x>230</x>
+          <y>190</y>
+          <width>16</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>Y</string>
+        </property>
+       </widget>
+       <widget class="QLabel" name="label_30">
+        <property name="geometry">
+         <rect>
+          <x>260</x>
+          <y>260</y>
+          <width>31</width>
+          <height>17</height>
+         </rect>
+        </property>
+        <property name="text">
+         <string>X+Y</string>
         </property>
        </widget>
       </widget>

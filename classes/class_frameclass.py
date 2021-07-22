@@ -19,10 +19,13 @@ class FrameClass:
         original  : original immutable frame, made during __init__
         gls       : gray level slicing image. What comes after the initial sliders."""
 
-        self.qpix = {'main': cqpx(frame), 'fft': cfft(frame, qpix=True)}
+        self.qpix = {'main': cqpx(frame), 'fft': cfft(frame, qpix=True),
+                     'empty': cqpx(np.zeros([100, 100], dtype='uint8'))}
         """ qpix are 'images' in the right format to be set to QLabels. The following qpix exist:
+        ( i am afraid a bit more already exist, I havent kept up with them ) 
         main      : the 'main' image shown in the videoplayer
-        fft       : the fourier transform of main"""
+        fft       : the fourier transform of main
+        empty     : returns a black screen"""
 
         self.fft_frames = {'main': cfft(frame), 'gls': cfft(frame), 'b_filter_a': cfft(frame),
                            'g_filter_a': cfft(frame)}
@@ -109,23 +112,62 @@ class FrameClass:
         self.qpix['main'] = cqpx(after_g_filter)
         self.qpix['fft'] = cqpx(functions.image_processing.image_process.prep_fft(self.fft_frames['g_filter_a']))
 
-    def calc_sobel(self, params: list):
-        #if self.isvalid['edge_base'] is False:
-        Qimage = QtGui.QPixmap.toImage(self.qpix['main'])
-        self.frames['pre_edge'] = functions.image_processing.image_process.qt_image_to_array(
-            Qimage, share_memory=True)
-        self.isvalid['edge_base'] = True
-        #elif self.isvalid['edge_base'] is True:
-         #   pass
+    def call_edge(self, para_sobel, para_canny):
+        """
+        :arg para_sobel: A list containing all the parameters for Sobel Edge finding
+        :arg para_canny: A list containing all the parameters for Canny Edge finding
+        :rtype: (Qpix_main), Qpix_window)
+
+        should draw text on screen both buttons can not be pressed together
+        https://stackoverflow.com/questions/57017820/how-to-add-a-text-on-imagepython-gui-pyqt5
+        """
+
+        dosobel = para_sobel[0]
+        docanny = para_canny[0]
+
+        assert isinstance(dosobel, bool), "wrong paralist order sobel"
+        assert isinstance(docanny, bool), "wrong paralist order canny"
+
+        if self.isvalid['edge_base'] is False:
+            Qimage = QtGui.QPixmap.toImage(self.qpix['main'])
+            self.frames['pre_edge'] = functions.image_processing.image_process.qt_image_to_array(
+                Qimage, share_memory=True)  # WHY is there data corruption if share memory is FALSE?!
+            self.isvalid['edge_base'] = True
+        elif self.isvalid['edge_base'] is True:
+            pass
+
+        if dosobel is True:
+            returnable = self.calc_sobel(para_sobel[1:])
+        elif docanny is True:
+            returnable = self.calc_canny(para_canny[1:])
+        else:
+            # if neither are true, go to status quo.
+            returnable = (self.qpix['main'], self.qpix['empty'])
+
+        # later we add a median filter here
+        return returnable
+
+    def calc_canny(self, parameters: list):
+        threshold1 = parameters[0]
+        threshold2 = parameters[1]
+        frame = self.frames['pre_edge']
+        edges = cv2.Canny(frame, threshold1, threshold2)
+        return cqpx(edges), self.qpix['main']
+
+    def calc_sobel(self, parameters: list) -> (QtGui.QPixmap, QtGui.QPixmap):
+        """
+        :param parameters: [Ksize, Scale, Delta]
+        :return: (Qpix_main, Qpix_window)
+        """
 
         frame = self.frames['pre_edge']
 
-        assert len(params) == 4, "Parameterlist length must be three"
+        assert len(parameters) == 3, "Parameterlist length must be three"
         # assert all([isinstance(x, int) for x in params]) is True, "All parameters must be of type int"
 
-        ksize = params[1]
-        scale = params[2]
-        delta = params[3]
+        ksize = parameters[0]
+        scale = parameters[1]
+        delta = parameters[2]
 
         grad_x = cv2.Sobel(frame, cv2.CV_16S, 1, 0, ksize=ksize, scale=scale, delta=delta,
                            borderType=cv2.BORDER_DEFAULT)
@@ -136,4 +178,6 @@ class FrameClass:
         abs_grad_y = cv2.convertScaleAbs(grad_y)
 
         grad = cv2.addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0)
+        # the gradient is shown in the main window, and in the third window we show the 'original' main
+        # so no error but a bit ... ill conceived naming
         return cqpx(grad), self.qpix['main']

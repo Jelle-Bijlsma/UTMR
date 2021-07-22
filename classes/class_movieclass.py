@@ -1,10 +1,15 @@
+from typing import List, Any
+
 import numpy as np
 import classes.class_frameclass
 import functions.image_processing.image_process
 from functions.image_processing.image_process import change_qpix as cqpx
+import PyQt5.QtGui
 
 
 class MovieClass:
+    framelist: List[classes.class_frameclass.FrameClass]
+
     def __init__(self):
         self.currentframe = 0
         self.maxframes = int
@@ -21,6 +26,7 @@ class MovieClass:
     def create_frameclass(self, imlist):
         self.framelist.clear()  # in case of re-initialization empty the previous list.
         for element in imlist:
+            # EMBARRASSINGLY PARALLEL, setup thread workers soon.
             self.framelist.append(classes.class_frameclass.FrameClass(element))
         self.maxframes = len(imlist) - 1
         self.parameters['shape'] = self.framelist[self.maxframes].parameters['shape']
@@ -54,5 +60,5 @@ class MovieClass:
             self.parameters['g_filter'][3])
         self.qpix['g_filter'] = cqpx(self.filters['g_filter'])
 
-    def qimtest(self, parameters):
-        return self.framelist[self.currentframe].calc_sobel(parameters)
+    def edge_call(self, para_sobel: list, para_canny: list) -> (PyQt5.QtGui.QPixmap, PyQt5.QtGui.QPixmap):
+        return self.framelist[self.currentframe].call_edge(para_sobel, para_canny)

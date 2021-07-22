@@ -99,7 +99,12 @@ class SliderClass:
             if value == 0:
                 element.setChecked(0)
 
-    def getvalue(self):
+    @property
+    def getvalue(self) -> list:
+        """
+
+        :rtype: list containing the values of each slider.
+        """
         vallist = []
         # go over the checkboxes, putting False for 0 and True for 1
         for element in self.checklist:

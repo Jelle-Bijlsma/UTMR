@@ -61,7 +61,13 @@ class BuildUp(gui_full.Ui_MainWindow):
         sobel_sliderlist = [self.slider_Skernel, self.slider_Sdst, self.slider_Sscale]
         sobel_line_editlist = [self.lineEdit_Skernel, self.lineEdit_Sdst, self.lineEdit_Sscale]
         self.My_sobel_slider = classes.class_extra.SliderClass(
-            sobel_sliderlist, sobel_line_editlist, self.sobel_change, [self.checkBox_sobel])
+            sobel_sliderlist, sobel_line_editlist, self.edge_change, [self.checkBox_sobel])
+
+        # slider list for canny
+        canny_sliderlist = [self.slider_Cthresh1, self.slider_Cthresh2]
+        canny_line_editlist = [self.lineEdit_Cthresh1, self.lineEdit_Cthresh2]
+        self.My_canny_slider = classes.class_extra.SliderClass(canny_sliderlist, canny_line_editlist,
+                                                               self.edge_change, [self.checkBox_Canny])
 
         # load pictures in
         self.mr_image.setPixmap(QtGui.QPixmap("./QT_Gui/images/baseimage.png"))
@@ -101,20 +107,22 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.filebrowse_png(True)  # load in all images and go through update cycle
         self.sliderchange()  # load the slider brightness settings in, go through update cycle
 
-    def sobel_change(self):
-        params = self.My_sobel_slider.getvalue()
-        main, side = self.CurMov.qimtest(params)
+    def edge_change(self):
+        para_sobel: list = self.My_sobel_slider.getvalue
+        para_canny: list = self.My_canny_slider.getvalue
+
+        main, side = self.CurMov.edge_call(para_sobel, para_canny)
         self.label_qim_tester.setPixmap(side)
         self.mr_image.setPixmap(main)
 
     # $$$$$$$$  functions relating to video editor
     def b_filterchange(self):
-        self.CurMov.parameters['b_filter'] = self.My_b_filter_slider.getvalue()
+        self.CurMov.parameters['b_filter'] = self.My_b_filter_slider.getvalue
         self.CurMov.getnewbfilter()
         self.update_all_things()
 
     def g_filterchange(self):
-        self.CurMov.parameters['g_filter'] = self.My_g_filter_slider.getvalue()
+        self.CurMov.parameters['g_filter'] = self.My_g_filter_slider.getvalue
         self.CurMov.getnewgfilter()
         self.update_all_things()
 
@@ -164,7 +172,7 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.histogram.addItem(self.bargraph)
         self.fourier_image.setPixmap(fft)
         self.filter_image1.setPixmap(b_filter)
-        self.sobel_change()
+        self.edge_change()
 
     def framechange(self):
         # called when you (or the machine) change the progress bar in the video player
@@ -176,7 +184,7 @@ class BuildUp(gui_full.Ui_MainWindow):
 
     def sliderchange(self):
         # [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
-        self.CurMov.parameters['gls'] = self.My_gls_slider.getvalue()
+        self.CurMov.parameters['gls'] = self.My_gls_slider.getvalue
         self.update_all_things()
 
     def play_button(self):
@@ -184,7 +192,6 @@ class BuildUp(gui_full.Ui_MainWindow):
         if self.timer.isActive():
             return
         self.timer.start(50)
-
 
     # pause_button is through a lambda function.
 
@@ -290,7 +297,7 @@ class BuildUp(gui_full.Ui_MainWindow):
     def circle_find(self):
         if self.circim is None:
             self.circle_newim()
-        parameters = self.My_circlefinder_slider.getvalue()
+        parameters = self.My_circlefinder_slider.getvalue
         img = functions.circle_tracking.circle_finder.update(self.circim, parameters)
         self.label_imcircle.setPixmap(cqpx(img))
 

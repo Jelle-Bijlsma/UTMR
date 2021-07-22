@@ -2562,7 +2562,7 @@
        </rect>
       </property>
       <property name="currentIndex">
-       <number>3</number>
+       <number>2</number>
       </property>
       <widget class="QWidget" name="tab">
        <attribute name="title">
@@ -5170,7 +5170,7 @@
        <attribute name="title">
         <string>edgefilter</string>
        </attribute>
-       <widget class="QSlider" name="horizontalSlider">
+       <widget class="QSlider" name="slider_Skernel">
         <property name="geometry">
          <rect>
           <x>20</x>
@@ -5192,7 +5192,7 @@
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
-       <widget class="QSlider" name="horizontalSlider_2">
+       <widget class="QSlider" name="slider_Sdst">
         <property name="geometry">
          <rect>
           <x>20</x>
@@ -5205,7 +5205,7 @@
          <enum>Qt::Horizontal</enum>
         </property>
        </widget>
-       <widget class="QSlider" name="horizontalSlider_3">
+       <widget class="QSlider" name="slider_Sscale">
         <property name="geometry">
          <rect>
           <x>20</x>
@@ -5286,7 +5286,7 @@
          <string>Canny</string>
         </property>
        </widget>
-       <widget class="QLineEdit" name="lineEdit_8">
+       <widget class="QLineEdit" name="lineEdit_Skernel">
         <property name="geometry">
          <rect>
           <x>190</x>
@@ -5296,7 +5296,7 @@
          </rect>
         </property>
        </widget>
-       <widget class="QLineEdit" name="lineEdit_9">
+       <widget class="QLineEdit" name="lineEdit_Sdst">
         <property name="geometry">
          <rect>
           <x>190</x>
@@ -5306,7 +5306,7 @@
          </rect>
         </property>
        </widget>
-       <widget class="QLineEdit" name="lineEdit_10">
+       <widget class="QLineEdit" name="lineEdit_Sscale">
         <property name="geometry">
          <rect>
           <x>190</x>
@@ -5316,7 +5316,7 @@
          </rect>
         </property>
        </widget>
-       <widget class="QDial" name="dial">
+       <widget class="QDial" name="dial_xy">
         <property name="geometry">
          <rect>
           <x>210</x>

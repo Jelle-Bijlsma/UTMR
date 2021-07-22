@@ -43,6 +43,12 @@ called from the event handler to iterate through the `framelist`
 has to be renamed. I am not quite sure why, however this works. It seems  something breaks when using QT5
 in conjuction with CV2.
 
+! qpix images are stored as RGB32, not as UINT8. This increases storage 4 fold.
+However current RAM usage is 1.1Gb. I have not found the root of the problem yet.
+
+sobel filter uses a shared memory array, if set to "copy" you get memory errors. 
+I would expect the opposite. I dont know why this works. 
+
 If you dont have 4k resolution tough luck.
 
 Menu buttons are suboptimal

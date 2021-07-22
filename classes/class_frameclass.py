@@ -1,28 +1,28 @@
 import cv2
 import numpy as np
+from PyQt5 import QtGui
 
 import functions.auxiliary
 import functions.image_processing.image_process
-from functions.image_processing.image_process import change_qpix as cqpx
 from functions.image_processing.image_process import calc_fft as cfft
-import copy
-from PyQt5 import QtGui
+from functions.image_processing.image_process import change_qpix as cqpx
+
 
 class FrameClass:
     def __init__(self, frame: np.array):
         # initialization for FrameClass method.
 
         self.frames = {'original': frame, 'gls': frame, 'b_filter_a': frame}
-        # frames are np.arrays used for different purposes. Bundled in a dictionary for easy acces.
-        # They are of dimension frame.shape() and are "dtype='uint8'"
-        # Name and key given:
-        # original  : original immutable frame, made during __init__
-        # gls       : gray level slicing image. What comes after the initial sliders.
+        """ frames are np.arrays used for different purposes. Bundled in a dictionary for easy acces.
+        They are of dimension frame.shape() and are "dtype='uint8'"
+        Name and key given:
+        original  : original immutable frame, made during __init__
+        gls       : gray level slicing image. What comes after the initial sliders."""
 
         self.qpix = {'main': cqpx(frame), 'fft': cfft(frame, qpix=True)}
-        # qpix are 'images' in the right format to be set to QLabels. The following qpix exist:
-        # main      : the 'main' image shown in the videoplayer
-        # fft       : the fourier transform of main
+        """ qpix are 'images' in the right format to be set to QLabels. The following qpix exist:
+        main      : the 'main' image shown in the videoplayer
+        fft       : the fourier transform of main"""
 
         self.fft_frames = {'main': cfft(frame), 'gls': cfft(frame), 'b_filter_a': cfft(frame),
                            'g_filter_a': cfft(frame)}
@@ -49,13 +49,14 @@ class FrameClass:
         rbound = new_slice_p[3]
 
         if bval > 0:  # B
-            self.frames['gls'] = np.where((255 - self.frames['original']) < bval, 255, self.frames['original'] + bval)
+            self.frames['gls'] = np.where((255 - self.frames['original']) < bval, 255,
+                                          self.frames['original'] + bval)
         else:
             self.frames['gls'] = np.where((self.frames['original'] + bval) < 0, 0, self.frames['original'] + bval)
         # gls
         self.frames['gls'] = self.frames['gls'].astype(np.int16)
-        temp = np.where((self.frames['gls'] >= lbound) & (self.frames['gls'] <= rbound), self.frames['gls'] + boost,
-                        self.frames['gls'])
+        temp = np.where((self.frames['gls'] >= lbound) & (self.frames['gls'] <= rbound),
+                        self.frames['gls'] + boost, self.frames['gls'])
         temp = np.where(temp > 255, 255, temp)
         pre_gls = np.where(temp < 0, 0, temp)
 
@@ -80,9 +81,12 @@ class FrameClass:
             self.qpix['fft'] = cfft(self.frames['gls'], qpix=True)
 
         if self.isvalid['histogram'] is False:
-            # since histogram has no inherent parameters we do a check against a manual one to avoid over-calculation.
+            # since histogram has no inherent parameters we do a check against a manual one to avoid
+            # over-calculation.
             self.histogram = functions.image_processing.image_process.calc_hist(self.frames['gls'])
             self.isvalid['histogram'] = True
+
+        self.isvalid['edge_base'] = False  # can the edge-finder rely on memory?
 
     def calc_bfilter(self, b_filter):
         # filters come in the undeformed state, thus to properly multiply them, they have to be shifted
@@ -105,83 +109,31 @@ class FrameClass:
         self.qpix['main'] = cqpx(after_g_filter)
         self.qpix['fft'] = cqpx(functions.image_processing.image_process.prep_fft(self.fft_frames['g_filter_a']))
 
-    def calc_sobel(self):
-        # https://stackoverflow.com/questions/37552924/convert-qpixmap-to-numpy
-        # https://stackoverflow.com/questions/45020672/convert-pyqt5-qpixmap-to-numpy-ndarray
+    def calc_sobel(self, params: list):
+        #if self.isvalid['edge_base'] is False:
+        Qimage = QtGui.QPixmap.toImage(self.qpix['main'])
+        self.frames['pre_edge'] = functions.image_processing.image_process.qt_image_to_array(
+            Qimage, share_memory=True)
+        self.isvalid['edge_base'] = True
+        #elif self.isvalid['edge_base'] is True:
+         #   pass
 
-        original_image = cv2.imread("./data/png/correct_video/IM_0011.png", 0)
-        print(original_image.dtype)
-        w,h = np.shape(original_image)
-        Qimage = QtGui.QImage(original_image.data.tobytes(), h, w, h, QtGui.QImage.Format_Indexed8)
-        QPix_OG = QtGui.QPixmap.fromImage(Qimage)
-        print("we doin this")
-        Qimage_return = QtGui.QPixmap.toImage(QPix_OG)
-        # from here we try to make the array
+        frame = self.frames['pre_edge']
 
-        s = Qimage_return.bits()
-        print(type(s))
-        print(s)
-        s = s.asstring(w*h)
-        print(type(s))
-        new_array = np.fromstring(s, dtype=np.uint8).reshape((h,w))
+        assert len(params) == 4, "Parameterlist length must be three"
+        # assert all([isinstance(x, int) for x in params]) is True, "All parameters must be of type int"
 
-        new_array = self.qt_image_to_array(Qimage)
-        # print(np.array_equal(new_array,original_image))
+        ksize = params[1]
+        scale = params[2]
+        delta = params[3]
 
-        # now that we have the array we can convert it back again
-        Qimage2 = QtGui.QImage(new_array.data.tobytes(), h, w, h, QtGui.QImage.Format_Indexed8)
-        QPix_2 = QtGui.QPixmap.fromImage(Qimage2)
-        #sameqpix = QtGui.QPixmap.toImage(QPix_2)
-        # sameqpix = cqpx(return_image)
-        return QPix_2, QPix_OG
+        grad_x = cv2.Sobel(frame, cv2.CV_16S, 1, 0, ksize=ksize, scale=scale, delta=delta,
+                           borderType=cv2.BORDER_DEFAULT)
+        grad_y = cv2.Sobel(frame, cv2.CV_16S, 0, 1, ksize=ksize, scale=scale, delta=delta,
+                           borderType=cv2.BORDER_DEFAULT)
 
-    def qt_image_to_array(self, img: QtGui.QImage, share_memory=False):
-        """ Creates a numpy array from a QImage.
+        abs_grad_x = cv2.convertScaleAbs(grad_x)
+        abs_grad_y = cv2.convertScaleAbs(grad_y)
 
-            If share_memory is True, the numpy array and the QImage is shared.
-            Be careful: make sure the numpy array is destroyed before the image,
-            otherwise the array will point to unreserved memory!!
-        """
-        assert isinstance(img, QtGui.QImage), "img must be a QtGui.QImage object"
-        assert img.format() == QtGui.QImage.Format_Indexed8, \
-            "img format must be QImage.Format.Format_RGB32, got: {}".format(img.format())
-
-        img_size = img.size()
-        buffer = img.constBits()  # Returns a pointer to the first pixel data.
-        buffer.setsize(img_size.height()*img_size.width()*8) # the 8 might be 4 if youre not running 64bit
-        # https://stackoverflow.com/questions/3853312/sizeof-void-pointer (OR is it for uint8?)
-        # https://doc.qt.io/qt-5/qimage.html#constBits
-
-        # Sanity check
-        n_bits_buffer = len(buffer)
-        n_bits_image = img_size.width() * img_size.height() * img.depth()
-        assert n_bits_buffer == n_bits_image, \
-            "size mismatch: {} != {}".format(n_bits_buffer, n_bits_image)
-
-        assert img.depth() == 8, "unexpected image depth: {}".format(img.depth())
-
-        # Note the different width height parameter order!
-        arr = np.ndarray(shape=(img_size.height(), img_size.width(), img.depth()//8),
-                         buffer=buffer,
-                         dtype=np.uint8)
-
-        if share_memory:
-            return arr
-        else:
-            return copy.deepcopy(arr)
-
-    # def calc_bfilter(self, filter, filterparams):
-    #     if np.array_equal(filter, self.filter_b):
-    #         return
-    #     # Z = np.fft.ifftshift(Z)
-    #     output = np.multiply(np.fft.fftshift(filter), self.ogFFT2)
-    #     self.filtered_fft = output
-    #     output = np.fft.ifft2(output)
-    #     output *= 255 / np.max(output)
-    #     output = output.astype(np.uint8)
-    #     # self.gls = output
-    #     self.qpix = cqpx(output)
-    #     self.filter_b = filter
-    #     self.b_filter_p[1:2] = filterparams
-    #     self.has_valid_fft = False
-    #     self.isfiltered = True
+        grad = cv2.addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0)
+        return cqpx(grad), self.qpix['main']

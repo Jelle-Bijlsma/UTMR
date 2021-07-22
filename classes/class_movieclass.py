@@ -54,5 +54,5 @@ class MovieClass:
             self.parameters['g_filter'][3])
         self.qpix['g_filter'] = cqpx(self.filters['g_filter'])
 
-    def qimtest(self):
-        return self.framelist[self.currentframe].calc_sobel()
+    def qimtest(self, parameters):
+        return self.framelist[self.currentframe].calc_sobel(parameters)

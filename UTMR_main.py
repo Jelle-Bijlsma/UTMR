@@ -31,27 +31,37 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.bargraph = pg.BarGraphItem()  # the histogram widget inside plotwidget (which is called self.histogram)
         self.check_filter1.setChecked(1)
 
-        # create sliderlists!
+        # slider list for the GLS
         gls_sliderlist = [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
-        gls_line_editlist = [self.lineEdit_Brightness, self.lineEdit_Boost, self.lineEdit_Lbound, self.lineEdit_Rbound]
+        gls_line_editlist = [self.lineEdit_Brightness, self.lineEdit_Boost,
+                             self.lineEdit_Lbound, self.lineEdit_Rbound]
         self.My_gls_slider = classes.class_extra.SliderClass(gls_sliderlist, gls_line_editlist, self.sliderchange)
 
+        # slider list for the b_filter
         b_filter_sliderlist = [self.slider_f_cutoff, self.slider_f_order]
         b_filter_line_editlist = [self.lineEdit_f_cutoff, self.lineEdit_f_order]
         self.My_b_filter_slider = classes.class_extra.SliderClass(b_filter_sliderlist, b_filter_line_editlist,
                                                                   self.b_filterchange, [self.check_filter1])
 
+        # slider list for the G_filter
         g_filter_sliderlist = [self.slider_g_size, self.slider_g_sigX, self.slider_g_sigY]
         g_filter_line_editlist = [self.lineEdit_g_size, self.lineEdit_g_sigx, self.lineEdit_g_sigY]
         self.My_g_filter_slider = classes.class_extra.SliderClass(g_filter_sliderlist, g_filter_line_editlist,
                                                                   self.g_filterchange, [self.check_filter_g])
 
+        # slider list for circle finding
         circle_finder_sliderlist = [self.slider_dp, self.slider_mindist, self.slider_param1, self.slider_param2,
                                     self.slider_minradius, self.slider_maxradius]
         circle_finder_line_editlist = [self.lineEdit_dp, self.lineEdit_minDist, self.lineEdit_param1,
                                        self.lineEdit_param2, self.lineEdit_minradius, self.lineEdit_maxradius]
         self.My_circlefinder_slider = classes.class_extra.SliderClass(circle_finder_sliderlist,
                                                                       circle_finder_line_editlist, self.circle_find)
+
+        # slider list for sobel
+        sobel_sliderlist = [self.slider_Skernel, self.slider_Sdst, self.slider_Sscale]
+        sobel_line_editlist = [self.lineEdit_Skernel, self.lineEdit_Sdst, self.lineEdit_Sscale]
+        self.My_sobel_slider = classes.class_extra.SliderClass(
+            sobel_sliderlist, sobel_line_editlist, self.sobel_change, [self.checkBox_sobel])
 
         # load pictures in
         self.mr_image.setPixmap(QtGui.QPixmap("./QT_Gui/images/baseimage.png"))
@@ -87,19 +97,15 @@ class BuildUp(gui_full.Ui_MainWindow):
         # circle finder
         self.pb_newim.clicked.connect(self.circle_newim)
 
-        #edge filter
-        self.checkBox_sobel.clicked.connect(self.qim_test)
-
         # test (also very important)
         self.filebrowse_png(True)  # load in all images and go through update cycle
         self.sliderchange()  # load the slider brightness settings in, go through update cycle
 
-    def qim_test(self):
-        sameqpix, QPix_OG = self.CurMov.qimtest()
-        self.label_qim_tester.setPixmap(QPix_OG)
-        self.mr_image.setPixmap(sameqpix)
-        # QPix_og = self.CurMov.qimtest()
-        # self.label_qim_tester.setPixmap(QPix_og)
+    def sobel_change(self):
+        params = self.My_sobel_slider.getvalue()
+        main, side = self.CurMov.qimtest(params)
+        self.label_qim_tester.setPixmap(side)
+        self.mr_image.setPixmap(main)
 
     # $$$$$$$$  functions relating to video editor
     def b_filterchange(self):
@@ -149,7 +155,7 @@ class BuildUp(gui_full.Ui_MainWindow):
             self.progress_bar.setValue(self.CurMov.currentframe)  # edit the progress bar
 
         qpix, histogram, fft, b_filter, g_filter = self.CurMov.return_frame()
-        self.mr_image.setPixmap(qpix)  # set the main image to the current Frame
+        # self.mr_image.setPixmap(qpix)  # set the main image to the current Frame
         self.filter_image_g.setPixmap(g_filter)
         # histogram time
         newbar = pg.BarGraphItem(x=self.histogramx, height=histogram, width=5, brush='g')
@@ -158,6 +164,7 @@ class BuildUp(gui_full.Ui_MainWindow):
         self.histogram.addItem(self.bargraph)
         self.fourier_image.setPixmap(fft)
         self.filter_image1.setPixmap(b_filter)
+        self.sobel_change()
 
     def framechange(self):
         # called when you (or the machine) change the progress bar in the video player
@@ -176,7 +183,8 @@ class BuildUp(gui_full.Ui_MainWindow):
         # you could skip this check, on the expense that repeatedly pressing play lags the player a bit
         if self.timer.isActive():
             return
-        self.timer.start(100)
+        self.timer.start(50)
+
 
     # pause_button is through a lambda function.
 

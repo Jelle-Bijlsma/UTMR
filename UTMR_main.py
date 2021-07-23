@@ -12,11 +12,13 @@ import functions.circle_tracking.circle_finder
 from QT_Gui import gui_full
 from functions.image_processing.image_process import change_qpix as cqpx
 
+from functions.threed_projection import twod_movement as TwoDclass
+
 
 # the whole thing is just existing within this class.
-class BuildUp(gui_full.Ui_MainWindow):
-    def __init__(self):
-        super().__init__()
+class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
+    def __init__(self, parent=None):
+        super(BuildUp, self).__init__(parent)
         self.setupUi(MainWindow)
         # initialize timer video player. timer is started in the self.play_button
         self.timer = QtCore.QTimer()
@@ -106,6 +108,31 @@ class BuildUp(gui_full.Ui_MainWindow):
         # test (also very important)
         self.filebrowse_png(True)  # load in all images and go through update cycle
         self.sliderchange()  # load the slider brightness settings in, go through update cycle
+
+        app.focusChanged.connect(self.on_focuschanged)
+
+        # square move
+        self.SqMv = TwoDclass.TwoDimMover([500, 500])
+        self.centralwidget.setFocus()
+
+    def on_focuschanged(self):
+        # https://www.youtube.com/watch?v=PDWd2I2ixDY
+        self.centralwidget.setFocus()
+        print(self.isActiveWindow())
+
+
+    def mousePressEvent(self, event):
+        if event.button() == Qt.LeftButton:
+            print("Left mouse click")
+        elif event.button() == Qt.RightButton:
+            print("Right mouse click")
+        elif event.button() == Qt.MidButton:
+            print("Middle mouse click")
+
+    def keyPressEvent(self, event):
+        # https://stackoverflow.com/questions/49418905/setting-focus-on-qlineedit-widget
+        # its not working and something to do with focus..
+        print("key press")
 
     def edge_change(self):
         para_sobel: list = self.My_sobel_slider.getvalue
@@ -304,8 +331,10 @@ class BuildUp(gui_full.Ui_MainWindow):
 
 if __name__ == "__main__":
     # chad no argument vs virgin sys.argv
-    app = QtWidgets.QApplication([])
+    app = QtWidgets.QApplication(sys.argv)
+
     MainWindow = QtWidgets.QMainWindow()
     ui = BuildUp()
     MainWindow.show()
+
     sys.exit(app.exec_())

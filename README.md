@@ -49,6 +49,9 @@ However current RAM usage is 1.1Gb. I have not found the root of the problem yet
 sobel filter uses a shared memory array, if set to "copy" you get memory errors. 
 I would expect the opposite. I dont know why this works. 
 
+**focus**: there is a problem with keyboard input. keyPressEvent is not 
+properly registered. I believe this has something to do with window focus..
+
 If you dont have 4k resolution tough luck.
 
 Menu buttons are suboptimal

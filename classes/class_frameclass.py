@@ -10,8 +10,16 @@ from functions.image_processing.image_process import change_qpix as cqpx
 
 class FrameClass:
     def __init__(self, frame):
-        # initialization for FrameClass method.
+        self.theframe = frame
+        self.runstatus = False
 
+    def print_runstatus(self):
+        print(self.runstatus)
+
+    # initialization for FrameClass method.
+    def init2(self):
+        frame = self.theframe
+        self.runstatus = True
         self.frames = {'original': frame, 'gls': frame, 'b_filter_a': frame}
         """ frames are np.arrays used for different purposes. Bundled in a dictionary for easy acces.
         They are of dimension frame.shape() and are "dtype='uint8'"

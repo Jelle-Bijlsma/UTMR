@@ -9,7 +9,6 @@ import classes.class_frameclass
 import functions.image_processing.image_process
 from functions.image_processing.image_process import change_qpix as cqpx
 
-import time
 
 def get4(list_input):
     def correct(val, val2=1):
@@ -40,9 +39,36 @@ class MyManager(BaseManager):
 MyManager.register('frameclass', classes.class_frameclass.FrameClass)
 
 
-def worker(my_list):
-    for element in my_list:
-        element.init2()
+def external_worker(queue, my_list, private_q):
+    """"
+    list: is a list containing tuples [(idx,val), (idx,val) ... ], where each element has an index and a tuple.
+    """
+    manager = MyManager()
+    manager.start()
+    classlist = []
+
+    for idx, val in my_list:
+        created = manager.frameclass(val)
+        # created = classes.class_frameclass.FrameClass(val)
+        classlist.append((idx, created))
+
+    queue.put(classlist)
+
+    while True:
+        if private_q.empty() is False:
+            msg = private_q.get()
+            if msg == "stop":
+                print("process exiting")
+                manager.shutdown()
+                break
+
+
+def internal_worker(my_list):
+    returnlist = []
+    for idx, val in my_list:
+        created = classes.class_frameclass.FrameClass(val)
+        returnlist.append((idx, created))
+    return returnlist
 
 
 class MovieClass:
@@ -65,37 +91,37 @@ class MovieClass:
         Framelist: List of all the instances of the frameclass, ordered.
 
         """
-
-        manager = MyManager()
-        manager.start()
-
-        classlist = []
-        rn = []
-
-        for element in imlist:
-            classlist.append(manager.frameclass(element))
-
         processes = []
-
+        classlist = []
         self.framelist.clear()  # in case of re-initialization empty the previous list.
-        chop_classlist = get4(classlist)
+        imlist_numbered = [x for x in enumerate(imlist)]
+        imlist_chopped = get4(imlist_numbered)
+
+        q = multiprocessing.Queue()
+        qlist = [multiprocessing.Queue(), multiprocessing.Queue(), multiprocessing.Queue()]
+
+        print(imlist_chopped)
 
         for x in range(3):  # [0,1,2]
-            p = multiprocessing.Process(target=worker, args=(chop_classlist[x],))
+            p = multiprocessing.Process(target=external_worker, args=(q, imlist_chopped[x], qlist[x]))
             p.start()
             processes.append(p)
 
-        worker(chop_classlist[3])
+        print("defined")
+        classlist.append(internal_worker(imlist_chopped[3]))
+        print(classlist)
 
-        for x in processes:
-            x.join()
+        while len(classlist) <3:
+            preclasslist = q.get()
+            print("did we get here?")
+            temp = [(x, y._getvalue()) for x, y in preclasslist]
+            classlist.append(temp)
+
+        for element in qlist:
+            element.put("stop")
+
+        print(classlist)
         # OLD stuff happening below
-
-        for element in classlist:
-            rn.append(element._getvalue())
-
-        print("end")
-        time.sleep(10)
 
         for element in imlist:
             # EMBARRASSINGLY PARALLEL, setup thread workers soon.

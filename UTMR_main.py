@@ -1,5 +1,6 @@
 import os
 import sys
+import time
 
 import pyqtgraph as pg
 from PyQt5 import QtCore, QtGui, QtWidgets
@@ -9,15 +10,16 @@ import classes.class_frameclass
 import classes.class_movieclass
 import functions.auxiliary
 import functions.circle_tracking.circle_finder
-from QT_Gui import gui_full
 from functions.image_processing.image_process import change_qpix as cqpx
-
 from functions.threed_projection import twod_movement as TwoDclass
+
+from QT_Gui import gui_full
 
 
 # the whole thing is just existing within this class.
 class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
     def __init__(self, parent=None):
+        tic = time.perf_counter()
         super(BuildUp, self).__init__(parent)
         self.setupUi(MainWindow)
         # initialize timer video player. timer is started in the self.play_button
@@ -114,15 +116,17 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         # square move
         self.SqMv = TwoDclass.TwoDimMover([500, 500])
         self.centralwidget.setFocus()
+        toc = time.perf_counter()
+        print(f"startup time = {toc - tic} seconds")
 
     def on_focuschanged(self):
         # https://www.youtube.com/watch?v=PDWd2I2ixDY
         self.centralwidget.setFocus()
         print(self.isActiveWindow())
 
-
     def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
+        print("event is focus")
+        if event.button() == c.LeftButton:
             print("Left mouse click")
         elif event.button() == Qt.RightButton:
             print("Right mouse click")

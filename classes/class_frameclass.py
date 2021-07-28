@@ -9,7 +9,7 @@ from functions.image_processing.image_process import change_qpix as cqpx
 
 
 class FrameClass:
-    def __init__(self, frame: np.array):
+    def __init__(self, frame):
         # initialization for FrameClass method.
 
         self.frames = {'original': frame, 'gls': frame, 'b_filter_a': frame}

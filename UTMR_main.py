@@ -11,8 +11,10 @@ import functions.auxiliary
 import functions.circle_tracking.circle_finder
 from QT_Gui import gui_full
 from functions.image_processing.image_process import change_qpix as cqpx
-
 from functions.threed_projection import twod_movement as TwoDclass
+
+
+# import functions.morphology_code as morph
 
 
 # the whole thing is just existing within this class.
@@ -23,9 +25,16 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         # initialize timer video player. timer is started in the self.play_button
         self.timer = QtCore.QTimer()
         self.timer.timeout.connect(self.next_frame)
+        self.coords = None
+        # morph
+        self.morphstatus = False
+        self.floodparam = False
+        # this is a double, should be passed through function but frameclass has an independent
+        # variable too
+        self.valid_ops = ["dilate", "erosion", "m_grad", "blackhat", "whitehat"]
 
         self.threadpool = QtCore.QThreadPool()
-        print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
+        # print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
 
         # start initializing variables
         self.CurMov = classes.class_movieclass.MovieClass()
@@ -74,6 +83,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         # load pictures in
         self.mr_image.setPixmap(QtGui.QPixmap("./QT_Gui/images/baseimage.png"))
         self.label_logo_uni.setPixmap((QtGui.QPixmap("./QT_Gui/images/UTlogo.png")))
+        self.lineEdit_save.isEnabled()
 
         # self.stackedWidget.setCurrentIndex(0)  # initialize to homepage
         self.stackedWidget.setCurrentIndex(1)  # initialize to video-edit-page
@@ -109,30 +119,123 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.filebrowse_png(True)  # load in all images and go through update cycle
         self.sliderchange()  # load the slider brightness settings in, go through update cycle
 
-        app.focusChanged.connect(self.on_focuschanged)
+        # app.focusChanged.connect(self.on_focuschanged)
 
         # square move
         self.SqMv = TwoDclass.TwoDimMover([500, 500])
         self.centralwidget.setFocus()
 
+        # morphology:
+        self.dilation.clicked.connect(lambda: self.morphstring_add("dilate"))
+        self.erosion.clicked.connect(lambda: self.morphstring_add("erosion"))
+        self.m_grad.clicked.connect(lambda: self.morphstring_add("m_grad"))
+        self.blackhat.clicked.connect(lambda: self.morphstring_add("blackhat"))
+        self.white_hat.clicked.connect(lambda: self.morphstring_add("whitehat"))
+
+        self.checkBox_morph.pressed.connect(self.startmorph)
+        self.mr_image.mousePressEvent = self.get_pixel
+        self.checkBox_segment.pressed.connect(self.floodit)
+
+    def floodit(self):
+        # meaning it is not checked
+        if self.checkBox_segment.isChecked() is True:
+            self.floodparam = False
+        else:
+            self.floodparam = True
+
+        self.update_all_things()
+
+    def morphstring_add(self, stringz):
+        """"
+        function called when new text is added to the 'textEdit_morph' box in the morphology tab.
+        TextColor is set to black, data is pulled from the 'spinBox' regarding kernel size
+        and the comboBox for kernel shape.
+
+        cv2.getStructuringElement uses a '0,1,2' notation for sq. rect. ellipse, thus the index of the
+        dropdown menu corresponds to these.
+        """
+        self.textEdit_morph.setTextColor(QtGui.QColor(0, 0, 0, 255))
+        stringz += f" kernel: {self.spinBox.value()} shape: {self.comboBox.currentIndex()}"
+        self.textEdit_morph.append(stringz)
+
+    def startmorph(self):
+        error = self.checkmorph()
+        if error == 1:
+            # if there is an error in the checker, uncheck the checkbox
+            self.checkBox_morph.setChecked(True)
+            self.morphstatus = False
+            self.update_all_things()
+            return
+
+        # dont think this applies now..
+        if self.checkBox_morph.isChecked() is not False:
+            # if the code is called when the checkbox is unchecked, return
+            self.morphstatus = False
+            self.update_all_things()
+            return
+
+        self.morphstatus = True
+        self.update_all_things()
+
+    def checkmorph(self):
+        """"
+        Checking function to see if the operation is spelled correctly, and if not, color the corresponding
+        operation red. The addition of kernel + size was done later, and thus no error checking exists for that
+        yet..
+        """
+        errorcode = 0
+        cursor_pos = 0
+        clrR = QtGui.QColor(255, 0, 0, 255)
+        clrB = QtGui.QColor(0, 0, 0, 255)
+        cursor = self.textEdit_morph.textCursor()
+
+        for element in self.textEdit_morph.toPlainText().split('\n'):
+            # split the full textEdit_morph up into newlines
+            starter = element.split(' ')
+            # split the newlines up into words
+            if starter[0] in self.valid_ops:
+                # we color it black, in case it previously has been colored red.
+                # could color all black on each iteration and recolor all the reds. too bad!
+                cursor.setPosition(cursor_pos)
+                cursor.movePosition(20, 1, 1)
+                self.textEdit_morph.setTextCursor(cursor)
+                self.textEdit_morph.setTextColor(clrB)
+                cursor_pos += len(element) + 1
+                # print(cursor_pos)
+                cursor.setPosition(0)
+                # calls to setTextCursor are made to move the cursor to the actual position on screen
+                self.textEdit_morph.setTextCursor(cursor)
+            else:
+                # maybe move next 7 lines into morp, and call it for this 1 and the previous 1?
+                cursor.setPosition(cursor_pos)
+                cursor.movePosition(20, 1, 1)
+                self.textEdit_morph.setTextCursor(cursor)
+                self.textEdit_morph.setTextColor(clrR)
+                cursor_pos += len(element) + 1
+                cursor.setPosition(0)
+                self.textEdit_morph.setTextCursor(cursor)
+                print("something is wrong!!")
+                errorcode = 1
+        return errorcode
+
+    def get_pixel(self, event):
+        x = event.pos().x()
+        y = event.pos().y()
+        h, w = self.CurMov.get_og_frame().shape
+        xtot = self.mr_image.width()
+        ytot = self.mr_image.height()
+        x = int((x / xtot) * w)
+        y = int((y / ytot) * h)
+        print(f"rescaled x = {x}, rescaled y = {y}")
+        coords = f"x:{x}, y:{y}"
+        self.coords = (x, y)
+        self.lineEdit_coords.setText(coords)
+
+
     def on_focuschanged(self):
         # https://www.youtube.com/watch?v=PDWd2I2ixDY
-        self.centralwidget.setFocus()
+        # self.centralwidget.setFocus()
         print(self.isActiveWindow())
-
-
-    def mousePressEvent(self, event):
-        if event.button() == Qt.LeftButton:
-            print("Left mouse click")
-        elif event.button() == Qt.RightButton:
-            print("Right mouse click")
-        elif event.button() == Qt.MidButton:
-            print("Middle mouse click")
-
-    def keyPressEvent(self, event):
-        # https://stackoverflow.com/questions/49418905/setting-focus-on-qlineedit-widget
-        # its not working and something to do with focus..
-        print("key press")
 
     def edge_change(self):
         para_sobel: list = self.My_sobel_slider.getvalue
@@ -173,7 +276,9 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.pb_play.setToolTip("")
 
         # create temp list of all images in np.array() format
-        imlist = functions.auxiliary.loadin(filelist, path)
+        # im = im[58:428, 143:513]
+        imlist = functions.auxiliary.loadin(filelist, path, size=[58, 428, 143, 513])
+        # the loadin function does the RESIZE.
         self.CurMov.create_frameclass(imlist)
         self.progress_bar.setMaximum(self.CurMov.maxframes)
         self.update_all_things()
@@ -189,17 +294,36 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         if self.progress_bar.value() != self.CurMov.currentframe:
             self.progress_bar.setValue(self.CurMov.currentframe)  # edit the progress bar
 
+        # GLS
         qpix, histogram, fft, b_filter, g_filter = self.CurMov.return_frame()
         # self.mr_image.setPixmap(qpix)  # set the main image to the current Frame
-        self.filter_image_g.setPixmap(g_filter)
+        # self.filter_image_g.setPixmap(g_filter)  # i think this can go down
         # histogram time
         newbar = pg.BarGraphItem(x=self.histogramx, height=histogram, width=5, brush='g')
         self.histogram.clear()
         self.bargraph = newbar
         self.histogram.addItem(self.bargraph)
+        # FFT
         self.fourier_image.setPixmap(fft)
+        # FILTERS
+        self.filter_image_g.setPixmap(g_filter)
         self.filter_image1.setPixmap(b_filter)
+        # EDGES
         self.edge_change()
+        # MORPH
+
+        if self.morphstatus is True:
+            temp = self.CurMov.morphstart(self.textEdit_morph.toPlainText())
+            print("return")
+            self.mr_image.setPixmap(temp)
+
+        if self.floodparam is True:
+            if self.coords is None:
+                print("pls click image :DD")
+                return
+            mask, masked_im = self.CurMov.call_flood(self.coords)
+            self.mr_image.setPixmap(masked_im)
+            self.label_mask_im.setPixmap(mask)
 
     def framechange(self):
         # called when you (or the machine) change the progress bar in the video player

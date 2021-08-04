@@ -73,7 +73,7 @@ def popupmsg(text: str, iswhat: str):
     return
 
 
-def loadin(filelist: list, path: str) -> list:
+def loadin(filelist: list, path: str, size: list) -> list:
     # load grayscale png from list, given path.
     path = path + "/"
     imlist = []
@@ -82,7 +82,9 @@ def loadin(filelist: list, path: str) -> list:
         cp = path + element
         # 0 indicates grayscale
         im = cv2.imread(cp, 0)
-        im = im[58:428, 143:513]
+        # resize happens here
+        im = im[size[0]:size[1], size[2]:size[3]]
+        # im = im[58:428, 143:513]
         imlist.append(im)
     return imlist
 

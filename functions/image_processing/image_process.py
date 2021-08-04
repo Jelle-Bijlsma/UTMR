@@ -46,7 +46,7 @@ def change_qpix(frame: np.array([])):
     # takes a frame and transforms it into qpix format. can take all datatypes.
     x = frame.shape
     if x == (0,):
-        print('empty ')
+        # print('empty ')
         # initialisation clause. When called with an empty array, the frame will be set to an empty 100,100.
         frame = np.zeros([100, 100], dtype='uint8')
     if frame.dtype != np.uint8:  # this check is very important. Frames already in uint8 will go to zero if
@@ -56,9 +56,9 @@ def change_qpix(frame: np.array([])):
         w, h = frame.shape
         qim = QtGui.QImage(frame.data.tobytes(), h, w, h, QtGui.QImage.Format_Indexed8)
     else:
-        w,h,c = frame.shape
-        print(frame.shape)
-        qim = QtGui.QImage(frame.data.tobytes(),h,w,h*4,QtGui.QImage.Format_RGB32)
+        w, h, c = frame.shape
+        # print(frame.shape)
+        qim = QtGui.QImage(frame.data.tobytes(), h, w, h * 4, QtGui.QImage.Format_RGB32)
     return QtGui.QPixmap.fromImage(qim)
 
 
@@ -76,8 +76,8 @@ def qt_image_to_array(img: QtGui.QImage, share_memory=False):
     assert img.format() == QtGui.QImage.Format_RGB32, \
         "img format must be QImage.Format.Format_Indexed8, got: {}".format(img.format())
 
-    print("check this out")
-    print(img.depth())
+    # print("check this out")
+    # print(img.depth())
     img_size = img.size()
     buffer = img.constBits()  # Returns a pointer to the first pixel data.
     buffer.setsize(img_size.height() * img_size.width() * 8)  # the 8 might be 4 if youre not running 64bit
@@ -130,5 +130,6 @@ def float_uint8(fft_frame):
         frame = frame_normalized.astype(np.uint8)
     else:
         print("wrong datatype!")
-        frame = "wrong"
+        frame_normalized = (fft_frame * 255) / np.max(fft_frame)  # normalized like this
+        frame = frame_normalized.astype(np.uint8)
     return frame

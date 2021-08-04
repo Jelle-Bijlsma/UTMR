@@ -1,14 +1,26 @@
-from typing import List, Any
+from typing import List
 
+import PyQt5.QtGui
 import numpy as np
+
 import classes.class_frameclass
 import functions.image_processing.image_process
 from functions.image_processing.image_process import change_qpix as cqpx
-import PyQt5.QtGui
 
 
 class MovieClass:
     framelist: List[classes.class_frameclass.FrameClass]
+
+    # https://docs.python.org/3/faq/programming.html#why-are-default-values-shared-between-objects
+    # # Callers can only provide two parameters and optionally pass _cache by keyword
+    # def expensive(arg1, arg2, *, _cache={}):
+    #     if (arg1, arg2) in _cache:
+    #         return _cache[(arg1, arg2)]
+    #
+    #     # Calculate the value
+    #     result = ... expensive computation ...
+    #     _cache[(arg1, arg2)] = result           # Store result in the cache
+    #     return result
 
     def __init__(self):
         self.currentframe = 0
@@ -26,7 +38,10 @@ class MovieClass:
     def create_frameclass(self, imlist):
         self.framelist.clear()  # in case of re-initialization empty the previous list.
         for element in imlist:
-            # EMBARRASSINGLY PARALLEL, setup thread workers soon.
+            # EMBARRASSINGLY PARALLEL, OR NOT!?!
+            # For the life of me I can not figure out how to share a class between different processes. Queues,
+            # managers, proxies. Not working. Problem is pickling. Besides it being SO slow, it does not support
+            # QPix stuff. I need to find a way to use some form of shared memory.
             self.framelist.append(classes.class_frameclass.FrameClass(element))
         self.maxframes = len(imlist) - 1
         self.parameters['shape'] = self.framelist[self.maxframes].parameters['shape']
@@ -38,12 +53,13 @@ class MovieClass:
             self.currentframe = 0
         else:
             self.currentframe += 1
-        print("current frame is: " + str(self.currentframe))
+        # print("current frame is: " + str(self.currentframe))
 
     def return_frame(self):
-        print("return called")
-        print(self.parameters['gls'])
-        cframe = self.framelist[self.currentframe]  # cframe for [c]urrent frame
+        # print("return called")
+        # print(self.parameters['gls'])
+        self.cframe = self.framelist[self.currentframe]  # cframe for [c]urrent frame
+        cframe = self.cframe
         cframe.return_info(self.parameters['gls'], self.parameters['b_filter'][0], self.filters['b_filter'],
                            self.parameters['g_filter'][0], self.filters['g_filter'])
         return cframe.qpix['main'], cframe.histogram, cframe.qpix['fft'], self.qpix['b_filter'], self.qpix['g_filter']
@@ -62,3 +78,15 @@ class MovieClass:
 
     def edge_call(self, para_sobel: list, para_canny: list) -> (PyQt5.QtGui.QPixmap, PyQt5.QtGui.QPixmap):
         return self.framelist[self.currentframe].call_edge(para_sobel, para_canny)
+
+    def morphstart(self,textstring):
+        print("morphstart")
+        # i feel this alias could be .self
+        cframe = self.framelist[self.currentframe]
+        return cframe.domorph(textstring)
+
+    def get_og_frame(self):
+        return self.cframe.frames['original']
+
+    def call_flood(self, coords):
+        return self.cframe.call_flood(coords)

@@ -28,12 +28,16 @@ class Worker1(QtCore.QRunnable):
     def dicom2png(self, filelist, path, project_name):
         self.signals.starting.emit()
         self.a = 0
+        # print("we here")
         for element in filelist:
             self.a = self.a + 1
+            print("also here?")
             # disregard non-dicom files
-            if element[0:3] != 'IM_':
-                continue
-
+            # if element[0:3] != 'IM_':
+            #     print("incorrect filestring")
+            #     continue
+            # else:
+            #     print("not")
             # read file and put it in a use-able array
             string = path + element
             dicom = dcmread(string)
@@ -44,6 +48,7 @@ class Worker1(QtCore.QRunnable):
             self.signals.progress.emit(self.a)
             plt.close()
         self.signals.finished.emit()
+        # print("and here")
         return
 
     def png2avi(self, path, fps, savename):
@@ -118,7 +123,7 @@ class SliderClass:
             slidervalue = slider.value()
             vallist.append(slidervalue)
             lineedit.setText(str(slidervalue))
-        print(vallist)
+        # print(vallist)
         return vallist
 
     def setfun(self, function):

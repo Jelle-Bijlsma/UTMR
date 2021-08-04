@@ -12,7 +12,7 @@ class FrameClass:
     def __init__(self, frame: np.array):
         # initialization for FrameClass method.
 
-        self.frames = {'original': frame, 'gls': frame, 'b_filter_a': frame}
+        self.frames = {'original': frame, 'gls': frame, 'b_filter_a': frame, 'g_filter_a': frame}
         """ frames are np.arrays used for different purposes. Bundled in a dictionary for easy acces.
         They are of dimension frame.shape() and are "dtype='uint8'"
         Name and key given:
@@ -38,7 +38,7 @@ class FrameClass:
         self.histogram = functions.image_processing.image_process.calc_hist(self.frames['original'])
 
         self.isvalid = {'histogram': False, 'b_filter': False, 'g_filter': False}
-
+        self.valid_ops = ["dilate", "erosion", "m_grad", "blackhat", "whitehat"]
         self.parameters = {'gls': [0, 0, 0, 0], 'shape': frame.shape}
         # the parameters can be explained as follows
         # gls: brightness[0] boost[1]  lbound[2]  rbound[3]
@@ -69,7 +69,7 @@ class FrameClass:
 
         self.parameters['gls'] = new_slice_p
         self.isvalid['histogram'] = False  # after gls we need to recalculate the histogram.
-        print("gls calc")
+        # print("gls calc")
 
     def return_info(self, gls_p, bool_b_filter, b_filter, bool_g_filter, g_filter):
         # always do a gls check first. It is the base on which the rest runs.
@@ -99,6 +99,9 @@ class FrameClass:
         self.isvalid['histogram'] = False
         self.qpix['main'] = cqpx(after_b_filter)
         self.qpix['fft'] = cqpx(functions.image_processing.image_process.prep_fft(self.fft_frames['b_filter_a']))
+        # add to the collection
+        self.frames['b_filter_a'] = functions.image_processing.image_process.float_uint8(
+            after_b_filter)
 
     def calc_gfilter(self, g_filter):
         if self.isvalid['b_filter']:
@@ -111,6 +114,8 @@ class FrameClass:
         self.isvalid['histogram'] = False
         self.qpix['main'] = cqpx(after_g_filter)
         self.qpix['fft'] = cqpx(functions.image_processing.image_process.prep_fft(self.fft_frames['g_filter_a']))
+        self.frames['g_filter_a'] = functions.image_processing.image_process.float_uint8(
+            after_g_filter)
 
     def call_edge(self, para_sobel, para_canny):
         """
@@ -131,7 +136,8 @@ class FrameClass:
         if self.isvalid['edge_base'] is False:
             Qimage = QtGui.QPixmap.toImage(self.qpix['main'])
             self.frames['pre_edge'] = functions.image_processing.image_process.qt_image_to_array(
-                Qimage, share_memory=True)  # WHY is there data corruption if share memory is FALSE?!
+                Qimage, share_memory=True)[:, :, 0]  # WHY is there data corruption if share memory is FALSE?!
+            # take only the first 2d array because it returns a color channel while we work in grayscale.
             self.isvalid['edge_base'] = True
         elif self.isvalid['edge_base'] is True:
             pass
@@ -152,6 +158,11 @@ class FrameClass:
         threshold2 = parameters[1]
         frame = self.frames['pre_edge']
         edges = cv2.Canny(frame, threshold1, threshold2)
+        # print(f"canny shape is{np.shape(edges)}")
+
+        # canny by default outputs 8bit.
+        # https://docs.opencv.org/3.4/dd/d1a/group__imgproc__feature.html#ga04723e007ed888ddf11d9ba04e2232de
+        self.frames['canny'] = edges
         return cqpx(edges), self.qpix['main']
 
     def calc_sobel(self, parameters: list) -> (QtGui.QPixmap, QtGui.QPixmap):
@@ -180,4 +191,47 @@ class FrameClass:
         grad = cv2.addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0)
         # the gradient is shown in the main window, and in the third window we show the 'original' main
         # so no error but a bit ... ill conceived naming
+        # print(f"sobel shape is{np.shape(grad_x)}")
+        self.frames['sobel'] = functions.image_processing.image_process.float_uint8(grad)
         return cqpx(grad), self.qpix['main']
+
+    def domorph(self, textstring):
+        if 'canny' in self.frames:
+            self.frames['morph'] = np.copy(self.frames['canny'])
+            cur_ele = self.frames['morph']
+            for element in textstring.split('\n'):
+                starter = element.split(' ')
+                print(starter)
+                kernelsize = (int(starter[2]), int(starter[2]))
+                kernel = cv2.getStructuringElement(shape=int(starter[4]), ksize=kernelsize)
+                if starter[0] == self.valid_ops[0]:  # dilate
+                    cur_ele = cv2.dilate(cur_ele, kernel, iterations=1)
+                elif starter[0] == self.valid_ops[1]:  # erosion
+                    cur_ele = cv2.erode(cur_ele, kernel, iterations=1)
+                elif starter[0] == self.valid_ops[2]:  # m_grad
+                    cur_ele = cv2.morphologyEx(cur_ele, cv2.MORPH_GRADIENT, kernel)
+                elif starter[0] == self.valid_ops[3]:  # blackhat
+                    cur_ele = cv2.morphologyEx(cur_ele, cv2.MORPH_BLACKHAT, kernel)
+                elif starter[0] == self.valid_ops[4]:  # whitehat
+                    cur_ele = cv2.morphologyEx(cur_ele, cv2.MORPH_TOPHAT, kernel)
+            self.frames['morph'] = cur_ele
+            return cqpx(cur_ele)
+        else:
+            print("do canny first!")
+            return None
+
+    def call_flood(self,coords):
+        x,y = coords
+        if 'morph' in self.frames:
+            before_fill = np.copy(self.frames['morph'])
+            after_fill = np.copy(self.frames['morph'])
+            h, w = self.frames['morph'].shape
+            print(f"h:{h}, w:{w}")
+            mask = np.zeros((h + 2, w + 2), np.uint8)
+            cv2.floodFill(after_fill, mask, (x, y), 255)
+            self.frames['mask'] = after_fill ^ before_fill
+            self.frames['masked'] = self.frames['mask'] & self.frames['original']
+            return cqpx(self.frames['mask']), cqpx(self.frames['masked'])
+        else:
+            print("no morph found?!")
+            return

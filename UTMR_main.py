@@ -29,6 +29,9 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         # morph
         self.morphstatus = False
         self.floodparam = False
+        self.radio_circle = False
+        self.radio_image = True
+        self.circleparam = False
         # this is a double, should be passed through function but frameclass has an independent
         # variable too
         self.valid_ops = ["dilate", "erosion", "m_grad", "blackhat", "whitehat"]
@@ -67,6 +70,14 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
                                        self.lineEdit_param2, self.lineEdit_minradius, self.lineEdit_maxradius]
         self.My_circlefinder_slider = classes.class_extra.SliderClass(circle_finder_sliderlist,
                                                                       circle_finder_line_editlist, self.circle_find)
+
+        # slider list for circle finding IN THE REAL DEAL
+        circle_finder_sliderlist_2 = [self.slider_dp_2, self.slider_mindist_2, self.slider_param1_2,
+                                      self.slider_param2_2, self.slider_minradius_2, self.slider_maxradius_2]
+        circle_finder_line_editlist_2 = [self.lineEdit_dp_2, self.lineEdit_minDist_2, self.lineEdit_param1_2,
+                                         self.lineEdit_param2_2, self.lineEdit_minradius_2, self.lineEdit_maxradius_2]
+        self.My_circlefinder_slider_2 = classes.class_extra.SliderClass(
+            circle_finder_sliderlist_2, circle_finder_line_editlist_2, self.circle_change)
 
         # slider list for sobel
         sobel_sliderlist = [self.slider_Skernel, self.slider_Sdst, self.slider_Sscale]
@@ -135,6 +146,32 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.checkBox_morph.pressed.connect(self.startmorph)
         self.mr_image.mousePressEvent = self.get_pixel
         self.checkBox_segment.pressed.connect(self.floodit)
+
+        # circle finding
+        self.radioButton_image.setChecked(True)
+        self.radioButton_circle.toggled.connect(self.changestat)
+        self.radioButton_image.toggled.connect(self.changestat)
+        self.checkBox_circle.pressed.connect(self.find_circle)
+
+    # $$$$$$$$  functions relating to video editor
+    def find_circle(self):
+        # this is just copy paste drama and can be simplified.
+        if self.checkBox_circle.isChecked() is True:
+            self.circleparam = False
+        else:
+            self.circleparam = True
+
+        self.update_all_things()
+
+    def changestat(self):
+        if self.radioButton_circle.isChecked() is False:
+            self.radio_circle = False
+            self.radio_image = True
+        else:
+            self.radio_circle = True
+            self.radio_image = False
+
+        # print(f"circle = {self.radio_circle}, image = {self.radio_image}")
 
     def floodit(self):
         # meaning it is not checked
@@ -231,38 +268,13 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.coords = (x, y)
         self.lineEdit_coords.setText(coords)
 
-
-    def on_focuschanged(self):
-        # https://www.youtube.com/watch?v=PDWd2I2ixDY
-        # self.centralwidget.setFocus()
-        print(self.isActiveWindow())
-
-    def edge_change(self):
-        para_sobel: list = self.My_sobel_slider.getvalue
-        para_canny: list = self.My_canny_slider.getvalue
-
-        main, side = self.CurMov.edge_call(para_sobel, para_canny)
-        self.label_qim_tester.setPixmap(side)
-        self.mr_image.setPixmap(main)
-
-    # $$$$$$$$  functions relating to video editor
-    def b_filterchange(self):
-        self.CurMov.parameters['b_filter'] = self.My_b_filter_slider.getvalue
-        self.CurMov.getnewbfilter()
-        self.update_all_things()
-
-    def g_filterchange(self):
-        self.CurMov.parameters['g_filter'] = self.My_g_filter_slider.getvalue
-        self.CurMov.getnewgfilter()
-        self.update_all_things()
-
     def filebrowse_png(self, test=False):
         a = QtWidgets.QFileDialog()
         a.setDirectory("./data/png/")
         if test is False:
             path = str(a.getExistingDirectory(MainWindow, 'select folder with pngs'))
         else:
-            path = "./data/png/correct_video"
+            path = "/home/jelle/PycharmProjects/UTMR/data/png/0313_stationary"
         # 'get existing directory' never uses the final '/' so you have to manually input it.
         self.lineEdit_importpath.setText(path)
         filelist = os.listdir(path)
@@ -309,7 +321,11 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.filter_image_g.setPixmap(g_filter)
         self.filter_image1.setPixmap(b_filter)
         # EDGES
-        self.edge_change()
+        self.edge_change(killer=True)
+        main, side = self.CurMov.edge_call()
+        self.label_qim_tester.setPixmap(side)
+        self.mr_image.setPixmap(main)
+
         # MORPH
 
         if self.morphstatus is True:
@@ -324,6 +340,16 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             mask, masked_im = self.CurMov.call_flood(self.coords)
             self.mr_image.setPixmap(masked_im)
             self.label_mask_im.setPixmap(mask)
+            # round 2, fight!
+            self.CurMov.gls2()                      # GLS
+            temp1 = self.CurMov.gfilter2()                  # Gfilter
+            temp2 = self.CurMov.edge_call2()         # Canny
+            self.mr_image_2.setPixmap(temp2)
+
+        if self.circleparam is True:
+            temp = self.CurMov.circlefind()
+            self.mr_image_2.setPixmap(temp)
+            self.mr_image.setPixmap(cqpx(self.CurMov.get_og_frame()))
 
     def framechange(self):
         # called when you (or the machine) change the progress bar in the video player
@@ -333,9 +359,44 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         # calling an update on the progress bar position by means of "progress.bar.setValue" will lead you back
         # an make for double calculations.
 
+    def circle_change(self):
+        self.CurMov.parameters['hough'] = self.My_circlefinder_slider_2.getvalue
+        self.update_all_things()
+
+    def edge_change(self, jemo = 0, eder = 0, killer=False):
+        # WHAT DOES the clicked.connect and Valuechange return in SETFUN in CLASS EXTRA?
+        # so this is a completely different strat here.
+        # why did i do it like this...........
+        if self.radio_image is True:
+            self.CurMov.parameters['sobel'] = self.My_sobel_slider.getvalue
+            self.CurMov.parameters['canny'] = self.My_canny_slider.getvalue
+        if self.radio_circle is True:
+            self.CurMov.parameters['sobel2'] = self.My_sobel_slider.getvalue
+            self.CurMov.parameters['canny2'] = self.My_canny_slider.getvalue
+
+        print(killer)
+        if killer is False:
+            self.update_all_things()
+
+    def b_filterchange(self):
+        self.CurMov.parameters['b_filter'] = self.My_b_filter_slider.getvalue
+        self.CurMov.getnewbfilter()
+        self.update_all_things()
+
+    def g_filterchange(self):
+        if self.radio_image is True:
+            self.CurMov.parameters['g_filter'] = self.My_g_filter_slider.getvalue
+        if self.radio_circle is True:
+            self.CurMov.parameters['g_filter2'] = self.My_g_filter_slider.getvalue
+        self.CurMov.getnewgfilter()
+        self.update_all_things()
+
     def sliderchange(self):
         # [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
-        self.CurMov.parameters['gls'] = self.My_gls_slider.getvalue
+        if self.radio_image is True:
+            self.CurMov.parameters['gls'] = self.My_gls_slider.getvalue
+        if self.radio_circle is True:
+            self.CurMov.parameters['gls2'] = self.My_gls_slider.getvalue
         self.update_all_things()
 
     def play_button(self):
@@ -353,6 +414,9 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.My_g_filter_slider.valueset(0)
         self.update_all_things()
 
+    #
+    #
+    #
     # $$$$$$ functions related to dicom manager
     def filebrowse_dcm(self):
         # this could definitely be done different, too bad!

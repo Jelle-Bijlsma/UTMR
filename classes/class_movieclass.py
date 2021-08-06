@@ -75,11 +75,19 @@ class MovieClass:
             self.parameters['shape'], self.parameters['g_filter'][1], self.parameters['g_filter'][2],
             self.parameters['g_filter'][3])
         self.qpix['g_filter'] = cqpx(self.filters['g_filter'])
+        if 'g_filter2' in self.parameters:
+            self.filters['g_filter2'] = functions.image_processing.image_process.gaus_filter(
+                self.parameters['shape'], self.parameters['g_filter2'][1], self.parameters['g_filter2'][2],
+                self.parameters['g_filter2'][3])
 
-    def edge_call(self, para_sobel: list, para_canny: list) -> (PyQt5.QtGui.QPixmap, PyQt5.QtGui.QPixmap):
-        return self.framelist[self.currentframe].call_edge(para_sobel, para_canny)
+    def edge_call(self):
+        return self.cframe.call_edge(self.parameters['sobel'], self.parameters['canny'])
 
-    def morphstart(self,textstring):
+    def edge_call2(self):
+        return self.cframe.canny2(self.parameters['canny2'][1:])
+        # return self.cframe.sobel2(self.parameters['sobel2'][1:])
+
+    def morphstart(self, textstring):
         print("morphstart")
         # i feel this alias could be .self
         cframe = self.framelist[self.currentframe]
@@ -90,3 +98,15 @@ class MovieClass:
 
     def call_flood(self, coords):
         return self.cframe.call_flood(coords)
+
+    def circlefind(self):
+        return self.cframe.circlefind(self.parameters['hough'])
+
+    def gls2(self):
+        if 'gls2' in self.parameters:
+            return self.cframe.calc_gls2(self.parameters['gls2'])
+        else:
+            return self.cframe.qpix['original']
+
+    def gfilter2(self):
+        return self.cframe.calc_gfilter2(self.filters['g_filter2'])

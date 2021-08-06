@@ -1,6 +1,8 @@
 import cv2
 import numpy as np
 from PyQt5 import QtGui
+from scipy import interpolate
+
 
 import functions.auxiliary
 import functions.image_processing.image_process
@@ -71,6 +73,32 @@ class FrameClass:
         self.isvalid['histogram'] = False  # after gls we need to recalculate the histogram.
         # print("gls calc")
 
+    def calc_gls2(self, new_slice_p: list):
+        # gls has two main functions. Brightness (#B) adjustment and Graylevel slicing.
+        # easy reading by pulling the new slice parameters apart.
+        bval = new_slice_p[0]
+        boost = new_slice_p[1]
+        lbound = new_slice_p[2]
+        rbound = new_slice_p[3]
+
+        if bval > 0:  # B
+            self.frames['gls2'] = np.where((255 - self.frames['masked']) < bval, 255,
+                                          self.frames['masked'] + bval)
+        else:
+            self.frames['gls2'] = np.where((self.frames['masked'] + bval) < 0, 0, self.frames['masked'] + bval)
+        # gls
+        self.frames['gls2'] = self.frames['gls2'].astype(np.int16)
+        temp = np.where((self.frames['gls2'] >= lbound) & (self.frames['gls2'] <= rbound),
+                        self.frames['gls2'] + boost, self.frames['gls2'])
+        temp = np.where(temp > 255, 255, temp)
+        pre_gls = np.where(temp < 0, 0, temp)
+
+        self.frames['gls2'] = pre_gls.astype('uint8')
+        self.qpix['main2'] = cqpx(self.frames['gls2'])
+        self.fft_frames['gls2'] = cfft(self.frames['gls2'])
+
+        return cqpx(self.frames['gls2'])
+
     def return_info(self, gls_p, bool_b_filter, b_filter, bool_g_filter, g_filter):
         # always do a gls check first. It is the base on which the rest runs.
         self.calc_gls(gls_p)
@@ -117,6 +145,18 @@ class FrameClass:
         self.frames['g_filter_a'] = functions.image_processing.image_process.float_uint8(
             after_g_filter)
 
+    def calc_gfilter2(self, g_filter):
+        # if self.isvalid['b_filter']:
+        #     prev_frame = self.fft_frames['b_filter_a']
+        # else:
+        #     prev_frame = self.fft_frames['gls']
+        self.fft_frames['g_filter_a2'] = np.multiply(self.fft_frames['gls2'], np.fft.fftshift(g_filter))
+        after_g_filter = np.fft.ifft2(self.fft_frames['g_filter_a2'])
+        # this is a FFT, which is shifted. dtype = float
+        self.frames['g_filter_a2'] = functions.image_processing.image_process.float_uint8(
+            after_g_filter)
+        return cqpx(self.frames['g_filter_a2'])
+
     def call_edge(self, para_sobel, para_canny):
         """
         :arg para_sobel: A list containing all the parameters for Sobel Edge finding
@@ -142,13 +182,16 @@ class FrameClass:
         elif self.isvalid['edge_base'] is True:
             pass
 
+        print("here")
         if dosobel is True:
             returnable = self.calc_sobel(para_sobel[1:])
         elif docanny is True:
             returnable = self.calc_canny(para_canny[1:])
+            print("there")
         else:
             # if neither are true, go to status quo.
             returnable = (self.qpix['main'], self.qpix['empty'])
+            print("plsno")
 
         # later we add a median filter here
         return returnable
@@ -164,6 +207,39 @@ class FrameClass:
         # https://docs.opencv.org/3.4/dd/d1a/group__imgproc__feature.html#ga04723e007ed888ddf11d9ba04e2232de
         self.frames['canny'] = edges
         return cqpx(edges), self.qpix['main']
+
+    def canny2(self, parameters: list):
+        threshold1 = parameters[0]
+        threshold2 = parameters[1]
+        frame = np.copy(self.frames['g_filter_a2'])
+        edges = cv2.Canny(frame, threshold1, threshold2)
+        # print(f"canny shape is{np.shape(edges)}")
+
+        # canny by default outputs 8bit.
+        # https://docs.opencv.org/3.4/dd/d1a/group__imgproc__feature.html#ga04723e007ed888ddf11d9ba04e2232de
+        self.frames['canny2'] = edges
+        return cqpx(self.frames['canny2'])
+
+    def sobel2(self, parameters):
+        frame = np.copy(self.frames['g_filter_a2'])
+        ksize = parameters[0]
+        scale = parameters[1]
+        delta = parameters[2]
+
+        grad_x = cv2.Sobel(frame, cv2.CV_16S, 1, 0, ksize=ksize, scale=scale, delta=delta,
+                           borderType=cv2.BORDER_DEFAULT)
+        grad_y = cv2.Sobel(frame, cv2.CV_16S, 0, 1, ksize=ksize, scale=scale, delta=delta,
+                           borderType=cv2.BORDER_DEFAULT)
+
+        abs_grad_x = cv2.convertScaleAbs(grad_x)
+        abs_grad_y = cv2.convertScaleAbs(grad_y)
+        grad = cv2.addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0)
+        # the gradient is shown in the main window, and in the third window we show the 'original' main
+        # so no error but a bit ... ill conceived naming
+        print(f"sobel shape is{np.shape(grad_x)}")
+
+        self.frames['sobel2'] = functions.image_processing.image_process.float_uint8(grad)
+        return cqpx(self.frames['sobel2'])
 
     def calc_sobel(self, parameters: list) -> (QtGui.QPixmap, QtGui.QPixmap):
         """
@@ -191,8 +267,10 @@ class FrameClass:
         grad = cv2.addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0)
         # the gradient is shown in the main window, and in the third window we show the 'original' main
         # so no error but a bit ... ill conceived naming
-        # print(f"sobel shape is{np.shape(grad_x)}")
+        print(f"sobel shape is{np.shape(grad_x)}")
+        print(grad.dtype)
         self.frames['sobel'] = functions.image_processing.image_process.float_uint8(grad)
+        print(self.frames['sobel'].dtype)
         return cqpx(grad), self.qpix['main']
 
     def domorph(self, textstring):
@@ -235,3 +313,68 @@ class FrameClass:
         else:
             print("no morph found?!")
             return
+
+    def circlefind(self, parameters):
+        if len(parameters) != 6:
+            print(parameters)
+            return cqpx(self.frames['original'])
+
+        dp = parameters[0] / 25  # since PyQt does not allow for non int slider values, they have to be created.
+        minDist = parameters[1]
+        param1 = parameters[2]
+        param2 = parameters[3]
+        minradius = parameters[4]
+        maxradius = parameters[5]
+
+        imagepre = cv2.rotate(np.copy(self.frames['canny2']), cv2.ROTATE_90_CLOCKWISE)
+        image = cv2.resize(imagepre,(900,900))
+        # image = cv2.bitwise_not(image)
+
+        circles = cv2.HoughCircles(image, cv2.HOUGH_GRADIENT, dp=dp, minDist=minDist, param1=param1, param2=param2,
+                                   minRadius=minradius, maxRadius=maxradius)
+
+        if circles is not None:
+            # since the hough detects the circles randomly, we have the need to sort them in ascending order
+            # for the spline to work
+            conlist = circles[0, :, 0:2]
+            mysort = sorted(conlist, key=lambda p: p[0])
+            mysort = np.array(mysort)
+            x = mysort[:, 0]
+            y = mysort[:, 1]
+            # create spline
+            spl = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
+            spl.set_smoothing_factor(0.5)
+            # by creating a dense line grid to plot the spline over, we get smooth output
+            xnew2 = np.linspace(np.min(x) - 20, np.max(x) + 20, num=60, endpoint=True)
+            ynew2 = spl(xnew2)
+
+            # this construction turns the separate xnew2 and ynew2 into an array of like this:
+            # [[x0, y0]
+            # [x1, y1]] etc..
+            thelist = np.array([[x, y] for x, y in zip(xnew2, ynew2)], dtype="int")
+
+            # we now want to round the list, to make them into accessible pixel values for plotting.
+            # by drawing straight lines between each pixel value, we can recreate the spline in an image.
+            firsthit = False
+            lineting = []  # keeps pycharm happy
+            for element in thelist:
+                if firsthit is True:
+                    # drawing the line takes int's in tuple form.
+                    lineting = (lineting[0], lineting[1])
+                    elementa = (element[0], element[1])
+                    cv2.line(img=image, pt1=lineting, pt2=elementa, color=255, thickness=5)
+                    lineting = element
+                else:
+                    lineting = element
+                    firsthit = True
+
+            # we draw the circles where we found them.
+            # convert the (x, y) coordinates and radius of the circles to integers
+            circles = np.round(circles[0, :]).astype("int")
+            # loop over the (x, y) coordinates and radius of the circles
+            for (x, y, r) in circles:
+                # draw the circle in the output image, then draw a rectangle
+                # corresponding to the center of the circle
+                cv2.circle(image, (x, y), r, 125,4)
+
+        return cqpx(cv2.rotate(image,cv2.ROTATE_90_COUNTERCLOCKWISE))

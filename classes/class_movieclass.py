@@ -1,6 +1,4 @@
 from typing import List
-
-import PyQt5.QtGui
 import numpy as np
 
 import classes.class_frameclass
@@ -9,31 +7,21 @@ from functions.image_processing.image_process import change_qpix as cqpx
 
 
 class MovieClass:
-    framelist: List[classes.class_frameclass.FrameClass]
 
-    # https://docs.python.org/3/faq/programming.html#why-are-default-values-shared-between-objects
-    # # Callers can only provide two parameters and optionally pass _cache by keyword
-    # def expensive(arg1, arg2, *, _cache={}):
-    #     if (arg1, arg2) in _cache:
-    #         return _cache[(arg1, arg2)]
-    #
-    #     # Calculate the value
-    #     result = ... expensive computation ...
-    #     _cache[(arg1, arg2)] = result           # Store result in the cache
-    #     return result
 
     def __init__(self):
         self.currentframe = 0
-        self.maxframes = int
+        self.maxframes = 0
         self.framelist = []
-        self.parameters = {'gls': [0, 0, 0, 0], 'b_filter': [False, 1, 0], 'shape': (0, 0),
-                           'g_filter': [False, 0, 0]}
+        # self.parameters = {'gls': [0, 0, 0, 0], 'b_filter': [False, 1, 0], 'shape': (0, 0),
+        #                   'g_filter': [False, 0, 0]}
+        self.parameters = {}
         # the parameters can be explained as follows
         # gls:          brightness[0] boost[1]  lbound[2]  rbound[3]
         # b_filter:     on/off [0] cutoff [1] order [2]
         # shape:        size of the frames (x,y)
-        self.filters = {'b_filter': np.array([]), 'g_filter': np.array([])}
-        self.qpix = {'b_filter': cqpx(np.array([])), 'g_filter': cqpx(np.array([]))}
+        # self.filters = {'b_filter': np.array([]), 'g_filter': np.array([])}
+        # self.qpix = {'b_filter': cqpx(np.array([])), 'g_filter': cqpx(np.array([]))}
 
     def create_frameclass(self, imlist):
         self.framelist.clear()  # in case of re-initialization empty the previous list.

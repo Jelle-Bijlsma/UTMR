@@ -14,34 +14,40 @@ class FrameClass:
     def __init__(self, frame: np.array):
         # initialization for FrameClass method.
 
-        self.frames = {'original': frame, 'gls': frame, 'b_filter_a': frame, 'g_filter_a': frame}
+        #self.frames = {'original': frame, 'gls': frame, 'b_filter_a': frame, 'g_filter_a': frame}
+        self.frames = {}
         """ frames are np.arrays used for different purposes. Bundled in a dictionary for easy acces.
         They are of dimension frame.shape() and are "dtype='uint8'"
         Name and key given:
         original  : original immutable frame, made during __init__
         gls       : gray level slicing image. What comes after the initial sliders."""
 
-        self.qpix = {'main': cqpx(frame), 'fft': cfft(frame, qpix=True),
-                     'empty': cqpx(np.zeros([100, 100], dtype='uint8'))}
+        # self.qpix = {'main': cqpx(frame), 'fft': cfft(frame, qpix=True),
+        #              'empty': cqpx(np.zeros([100, 100], dtype='uint8'))}
+        self.qpix = {}
         """ qpix are 'images' in the right format to be set to QLabels. The following qpix exist:
         ( i am afraid a bit more already exist, I havent kept up with them ) 
         main      : the 'main' image shown in the videoplayer
         fft       : the fourier transform of main
         empty     : returns a black screen"""
 
-        self.fft_frames = {'main': cfft(frame), 'gls': cfft(frame), 'b_filter_a': cfft(frame),
-                           'g_filter_a': cfft(frame)}
-        # fft_frames are similar to frames except for the fact that they are NOT 'uint8'. Convention to have them
-        # NOT centered aesthetically.
-        # main:      : the fft of the frame
-        # gls        : fft of the gls
-        # b_filter_a : fft of gls after filtering with b_filter
+        self.fft_frames = {}
 
-        self.histogram = functions.image_processing.image_process.calc_hist(self.frames['original'])
+        """ fft_frames are similar to frames except for the fact that they are NOT 'uint8'. Convention to have them
+        NOT centered aesthetically.
+        main:      : the fft of the frame
+        gls        : fft of the gls
+        b_filter_a : fft of gls after filtering with b_filter
+        """
+        # self.histogram = functions.image_processing.image_process.calc_hist(self.frames['original'])
+        # self.isvalid = {'histogram': False, 'b_filter': False, 'g_filter': False}
+        # self.valid_ops = ["dilate", "erosion", "m_grad", "blackhat", "whitehat"]
+        # self.parameters = {'gls': [0, 0, 0, 0], 'shape': frame.shape}
+        self.histogram = None
+        self.isvalid = {}
+        self.valid_ops = []
+        self.parameters = {}
 
-        self.isvalid = {'histogram': False, 'b_filter': False, 'g_filter': False}
-        self.valid_ops = ["dilate", "erosion", "m_grad", "blackhat", "whitehat"]
-        self.parameters = {'gls': [0, 0, 0, 0], 'shape': frame.shape}
         # the parameters can be explained as follows
         # gls: brightness[0] boost[1]  lbound[2]  rbound[3]
 

@@ -8,3 +8,6 @@ interesting:
 https://stackoverflow.com/questions/9662164/what-is-the-proper-pattern-in-python-for-implementing-lazy-getters
 
 https://www.python-course.eu/python3_properties.php
+
+https://docs.python.org/3/faq/programming.html#why-are-default-values-shared-between-objects
+

@@ -1,4 +1,5 @@
 import os
+
 import cv2
 import matplotlib.pyplot as plt
 from PyQt5 import QtCore
@@ -79,23 +80,53 @@ class Worker1(QtCore.QRunnable):
         return
 
 
-class SliderClass:
-    def __init__(self, slides, line_edits, function, checklist=None):
-        # Usecase of thsi class. Many specific sliders, lineEdits and checkboxes are used together. Instead of
-        # 'hard-coding' all these things, using the SliderClass Class gives some ease of programming
+def labwrap(key, m_fun, inner_fun):
+    """"
+    function wraps for _coolfun
+    """
+    return lambda: m_fun(key, inner_fun)
 
-        # Order of 'slides' is important. Could maybe improve this?
+
+def labwrap3(mylist, element, textget):
+    """"
+    function wraps for setting the line_edits when manually entered
+    """
+    return lambda: mylist[element].setValue(int(textget()))
+
+
+class SliderClass:
+    all_sliders = []
+
+    def __init__(self, slides, line_edits, function, keyword, radio, checklist=None):
+        self.__class__.all_sliders.append(self)
+
         if checklist is None:
             checklist = []
         # the lists contain all the sliders, lineEdits and checkboxes used for a specific group.
         self.sliderlist = slides
         self.line_editlist = line_edits
         self.checklist = checklist
-        # .setfun takes a function as argument and connects the valueChanged signal to it for every element
-        # in the sliderlist and the clicked.connect to every element in the checklist.
-        self.setfun(function)
+        self.keyword = keyword
+        # _coolfun collects the data from the sliders and checkboxes and sends them to the movieclass
+        self._coolfun = labwrap(keyword, function, self.getvalue)
+        self._coolfun()  # call it to initialize all the line_edits.
 
-    def valueset(self, value):
+        for slider in self.sliderlist:
+            slider.valueChanged.connect(self._coolfun)
+        for checkbox in self.checklist:
+            checkbox.clicked.connect(self._coolfun)
+
+        tracker = 0
+        for line_edit in line_edits:
+            line_edit.returnPressed.connect(labwrap3(self.sliderlist, tracker, line_edit.text))
+            tracker += 1
+
+    def value_set(self, value, number):
+        # sets the value of the slider to a specific value. Currently only used when resetting the sliders.
+        # could later be used to load in parameters from a previously saved session for example.
+        self.sliderlist[number].setValue(value)
+
+    def value_reset(self, value):
         # sets the value of the slider to a specific value. Currently only used when resetting the sliders.
         # could later be used to load in parameters from a previously saved session for example.
         for element in self.sliderlist:
@@ -104,10 +135,12 @@ class SliderClass:
             if value == 0:
                 element.setChecked(0)
 
-    @property
+    def woof(self):
+        print(self.keyword)
+        print("woof")
+
     def getvalue(self) -> list:
         """
-
         :rtype: list containing the values of each slider.
         """
         vallist = []
@@ -123,34 +156,5 @@ class SliderClass:
             slidervalue = slider.value()
             vallist.append(slidervalue)
             lineedit.setText(str(slidervalue))
-        # print(vallist)
+
         return vallist
-
-    def setfun(self, function):
-        for element in self.sliderlist:
-            element.valueChanged.connect(function)
-        for element in self.checklist:
-            element.clicked.connect(function)
-
-# class PopupInput(QtWidgets.QWidget):
-#     def __init__(self):
-#         super().__init__()
-#
-#     def showdialog(self):
-#         text, ok = QtWidgets.QInputDialog.getText(self, 'input dialog', 'Is this ok?')
-#         if ok:
-#             return text
-#         else:
-#             return False
-#
-#
-# class PopupWaring(QtWidgets.QDialog):
-#     def __init__(self,text):
-#         super().__init__()
-#         self.setWindowTitle("watch out kid")
-#         a = QtWidgets.QLabel()
-#         a.setText("this thing aint on autopilot son ")
-#         QtWidgets.QPushButton("a button")
-#
-#     def showme(self):
-#         self.show()

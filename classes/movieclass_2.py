@@ -40,6 +40,7 @@ class MovieUpdate:
         """"
         function is called through the update sliderclass
         """
+        key = "".join(key)
         self.parameters[key] = fun()
         print(self.parameters)
 

@@ -1851,6 +1851,7 @@ class Ui_MainWindow(object):
         self.label_7.setObjectName("label_7")
         self.radioButton_image = QtWidgets.QRadioButton(self.editor_page)
         self.radioButton_image.setGeometry(QtCore.QRect(730, 40, 135, 28))
+        self.radioButton_image.setChecked(True)
         self.radioButton_image.setObjectName("radioButton_image")
         self.buttonGroup = QtWidgets.QButtonGroup(MainWindow)
         self.buttonGroup.setObjectName("buttonGroup")
@@ -2543,7 +2544,7 @@ class Ui_MainWindow(object):
 
         self.retranslateUi(MainWindow)
         self.stackedWidget.setCurrentIndex(1)
-        self.tabWidget.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):

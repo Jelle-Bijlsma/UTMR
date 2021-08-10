@@ -17,7 +17,6 @@ from QT_Gui import gui_full
 from functions.image_processing.image_process import change_qpix as cqpx
 from functions.threed_projection import twod_movement as TwoDclass
 
-
 # the whole thing is just existing within this class.
 class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
     def __init__(self, parent=None):
@@ -31,11 +30,21 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.CurMov = mvc2.MovieUpdate()
         self.imlist = []
 
+        radiotuple = (self.radioButton_image, self.radioButton_circle)
+
         # slider list for the GLS
         sl_gls = [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
         le_gls = [self.lineEdit_Brightness, self.lineEdit_Boost, self.lineEdit_Lbound, self.lineEdit_Rbound]
         self.SC_GLS = SliderClass(
-            sl_gls, le_gls, self.CurMov.value_changed, 'GLS', self.radioButton_image, checklist=None)
+            slides=sl_gls, line_edits=le_gls, function=self.CurMov.value_changed, keyword='GLS',
+            radiotuple=radiotuple, checklist=None)
+
+        # slider list for the b_filter
+        sl_bfilter = [self.slider_f_cutoff, self.slider_f_order]
+        le_bfilter = [self.lineEdit_f_cutoff, self.lineEdit_f_order]
+        self.SC_b_filter = SliderClass(
+            slides=sl_bfilter, line_edits=le_bfilter, function=self.CurMov.value_changed, keyword='b_filter',
+            radiotuple=radiotuple, checklist=[self.check_filter1])
 
         # load pictures in
         self.mr_image.setPixmap(QPixmap("./QT_Gui/images/baseimage.png"))
@@ -97,7 +106,6 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.CurMov.get_imlist(imlist=self.imlist)
         self.progress_bar.setMaximum(self.CurMov.maxframes)
         self.update_all_things(getvalue=True)
-        SliderClass.all_sliders[0].woof()
         print(SliderClass.all_sliders)
 
 

@@ -46,7 +46,8 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         # $ $ $ $ video editor
         # video player
         self.pb_load_movie.clicked.connect(self.filebrowse_png)
-        self.progress_bar.setMinimum(0)
+        self.progress_bar.setMinimum(2)
+        self.progress_bar.valueChanged.connect(self.progress_bar_fun)
         self.pb_reset.clicked.connect(self.reset_button)
         self.pb_play.clicked.connect(self.play_button)
         self.pb_pause.clicked.connect(lambda: self.timer.stop())
@@ -66,14 +67,14 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         sl_gls = [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
         le_gls = [self.lineEdit_Brightness, self.lineEdit_Boost, self.lineEdit_Lbound, self.lineEdit_Rbound]
         self.SC_GLS = SliderClass(
-            slides=sl_gls, line_edits=le_gls, function=self.CurMov.value_changed, keyword='GLS',
+            slides=sl_gls, line_edits=le_gls, function=self.pre_value_changed, keyword='GLS',
             radiotuple=radiotuple, checklist=None)
 
         # slider list for the b_filter
         sl_bfilter = [self.slider_f_cutoff, self.slider_f_order]
         le_bfilter = [self.lineEdit_f_cutoff, self.lineEdit_f_order]
         self.SC_b_filter = SliderClass(
-            slides=sl_bfilter, line_edits=le_bfilter, function=self.CurMov.value_changed, keyword='b_filter',
+            slides=sl_bfilter, line_edits=le_bfilter, function=self.pre_value_changed, keyword='b_filter',
             radiotuple=radiotuple, checklist=[self.check_filter1])
 
         # slider list for the G_filter
@@ -134,17 +135,45 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.CurMov.get_imlist(imlist=self.imlist)
         self.progress_bar.setMaximum(self.CurMov.maxframes)
         self.update_all_things(getvalue=True)
-        print(SliderClass.all_sliders)
+        #print(SliderClass.all_sliders)
 
     def next_frame(self):
         # called when the timer says it is time for the next frame
+        # i.e. increments '.frame_number'
         self.CurMov.get_frame()  # MovieClass method to go to the next frame index
+        if self.progress_bar.value() != self.CurMov.frame_number:
+            self.progress_bar.setValue(self.CurMov.frame_number)  # edit the progress bar
+        #print("next_frame")
         self.update_all_things()
+
+    def pre_value_changed(self,key,fun):
+        self.CurMov.value_changed(key,fun)
+        if self.CurMov.currentframe is None:
+            return
+        self.update_all_things()
+
+    def progress_bar_fun(self):
+        # called when you (or the machine) change the progress bar in the video player
+        self.CurMov.frame_number = self.progress_bar.value()
+        self.CurMov.currentframe = self.CurMov.imlist[self.CurMov.frame_number]
+        #print("progress_bar")
+        self.update_all_things()
+
 
     def update_all_things(self, getvalue=False):
         # called whenever the main screen should be updated
-        # if statement to reduce calculation costs
-        pass
+        # display = cqpx(self.CurMov.currentframe)
+        display = self.CurMov.update()
+        self.mr_image.setPixmap(display)
+
+
+        #print("update_all")
+        #
+        # imagelist = []
+        # imagelist.append(self.CurMov.update())
+
+
+
 
     def play_button(self):
         if self.timer.isActive():

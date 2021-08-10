@@ -58,7 +58,12 @@ def change_qpix(frame: np.array([])):
     else:
         w, h, c = frame.shape
         # print(frame.shape)
-        qim = QtGui.QImage(frame.data.tobytes(), h, w, h * 4, QtGui.QImage.Format_RGB32)
+        if c == 3:
+            qim = QtGui.QImage(frame.data.tobytes(), h, w, h * 4, QtGui.QImage.Format_RGB32)
+        elif c == 1:
+            qim = QtGui.QImage(frame.data.tobytes(), h, w, h, QtGui.QImage.Format_Indexed8)
+        else:
+            raise Exception("QPIX problems")
     return QtGui.QPixmap.fromImage(qim)
 
 

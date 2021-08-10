@@ -17,34 +17,19 @@ from QT_Gui import gui_full
 from functions.image_processing.image_process import change_qpix as cqpx
 from functions.threed_projection import twod_movement as TwoDclass
 
+
 # the whole thing is just existing within this class.
 class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
     def __init__(self, parent=None):
         super(BuildUp, self).__init__(parent)
         self.setupUi(MainWindow)
+        # start initializing variables
         self.timer = QTimer()
         self.timer.timeout.connect(self.next_frame)
         self.threadpool = QThreadPool()
-
-        # start initializing variables
         self.CurMov = mvc2.MovieUpdate()
         self.imlist = []
-
         radiotuple = (self.radioButton_image, self.radioButton_circle)
-
-        # slider list for the GLS
-        sl_gls = [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
-        le_gls = [self.lineEdit_Brightness, self.lineEdit_Boost, self.lineEdit_Lbound, self.lineEdit_Rbound]
-        self.SC_GLS = SliderClass(
-            slides=sl_gls, line_edits=le_gls, function=self.CurMov.value_changed, keyword='GLS',
-            radiotuple=radiotuple, checklist=None)
-
-        # slider list for the b_filter
-        sl_bfilter = [self.slider_f_cutoff, self.slider_f_order]
-        le_bfilter = [self.lineEdit_f_cutoff, self.lineEdit_f_order]
-        self.SC_b_filter = SliderClass(
-            slides=sl_bfilter, line_edits=le_bfilter, function=self.CurMov.value_changed, keyword='b_filter',
-            radiotuple=radiotuple, checklist=[self.check_filter1])
 
         # load pictures in
         self.mr_image.setPixmap(QPixmap("./QT_Gui/images/baseimage.png"))
@@ -77,9 +62,52 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.actionDicom_Edit.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(2))
         self.actionCircle_Tracking.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(3))
 
-        # test (also very important)
-        self.filebrowse_png(True)  # load in all images and go through update cycle
+        # slider list for the GLS
+        sl_gls = [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
+        le_gls = [self.lineEdit_Brightness, self.lineEdit_Boost, self.lineEdit_Lbound, self.lineEdit_Rbound]
+        self.SC_GLS = SliderClass(
+            slides=sl_gls, line_edits=le_gls, function=self.CurMov.value_changed, keyword='GLS',
+            radiotuple=radiotuple, checklist=None)
 
+        # slider list for the b_filter
+        sl_bfilter = [self.slider_f_cutoff, self.slider_f_order]
+        le_bfilter = [self.lineEdit_f_cutoff, self.lineEdit_f_order]
+        self.SC_b_filter = SliderClass(
+            slides=sl_bfilter, line_edits=le_bfilter, function=self.CurMov.value_changed, keyword='b_filter',
+            radiotuple=radiotuple, checklist=[self.check_filter1])
+
+        # slider list for the G_filter
+        sl_gfilter = [self.slider_g_size, self.slider_g_sigX, self.slider_g_sigY]
+        le_gfilter = [self.lineEdit_g_size, self.lineEdit_g_sigx, self.lineEdit_g_sigY]
+        self.SC_g_filter = SliderClass(
+            slides=sl_gfilter, line_edits=le_gfilter, function=self.CurMov.value_changed, keyword='g_filter',
+            radiotuple=radiotuple, checklist=[self.check_filter_g])
+
+        # slider list for sobel
+        sl_sobel = [self.slider_Skernel, self.slider_Sdst, self.slider_Sscale]
+        le_sobel = [self.lineEdit_Skernel, self.lineEdit_Sdst, self.lineEdit_Sscale]
+        self.My_sobel_slider = SliderClass(
+            slides=sl_sobel, line_edits=le_sobel, function=self.CurMov.value_changed, keyword='sobel',
+            radiotuple = radiotuple, checklist=[self.checkBox_sobel])
+
+        # slider list for canny
+        sl_canny = [self.slider_Cthresh1, self.slider_Cthresh2]
+        le_canny = [self.lineEdit_Cthresh1, self.lineEdit_Cthresh2]
+        self.My_canny_slider = SliderClass(
+            slides=sl_canny, line_edits=le_canny, function=self.CurMov.value_changed, keyword='canny',
+            radiotuple=radiotuple, checklist=[self.checkBox_Canny])
+
+        # slider list for circle finding
+        sl_cf = [self.slider_dp_2, self.slider_mindist_2, self.slider_param1_2,
+                 self.slider_param2_2, self.slider_minradius_2, self.slider_maxradius_2]
+        le_cf = [self.lineEdit_dp_2, self.lineEdit_minDist_2, self.lineEdit_param1_2,
+                 self.lineEdit_param2_2, self.lineEdit_minradius_2, self.lineEdit_maxradius_2]
+        self.SC_circlefinder = SliderClass(
+            slides=sl_cf, line_edits=le_cf, function=self.CurMov.value_changed, keyword='circlefinder',
+            radiotuple=None, checklist=[self.checkBox_circle])
+
+        # running functions at start:
+        self.filebrowse_png(True)  # load in all images and go through update cycle
 
     # $$$$$$$$  functions relating to video editor
     def filebrowse_png(self, test=False):
@@ -108,17 +136,15 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.update_all_things(getvalue=True)
         print(SliderClass.all_sliders)
 
-
     def next_frame(self):
         # called when the timer says it is time for the next frame
         self.CurMov.get_frame()  # MovieClass method to go to the next frame index
         self.update_all_things()
 
-    def update_all_things(self,getvalue=False):
+    def update_all_things(self, getvalue=False):
         # called whenever the main screen should be updated
         # if statement to reduce calculation costs
         pass
-
 
     def play_button(self):
         if self.timer.isActive():
@@ -218,8 +244,6 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
                                   dcm2pngworker.png2avi(a, b, c))
 
         dcm2pngworker.signals.videodone.connect(lambda: self.txtbox_cmd.append("video conversion done"))
-
-
 
 
 if __name__ == "__main__":

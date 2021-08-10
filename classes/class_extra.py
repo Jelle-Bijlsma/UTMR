@@ -1,14 +1,16 @@
+import copy
 import os
 
 import cv2
 import matplotlib.pyplot as plt
 from PyQt5 import QtCore, QtWidgets
 from pydicom import dcmread
-import copy
 
 """
 here live all the additional  small classes I'm using
 """
+
+
 class QtDesignError(Exception):
     pass
 
@@ -96,7 +98,8 @@ def labwrap3(mylist, element, textget):
     """
     return lambda: mylist[element].setValue(int(textget()))
 
-def special_print(text,value):
+
+def special_print(text, value):
     if value is True:
         print(text)
     else:
@@ -117,13 +120,18 @@ class SliderClass:
         :checklist          list of all checkboxes
         """
 
-
         # the lists contain all the sliders, lineEdits and checkboxes used for a specific group.
         self.sliderlist = slides
         self.line_editlist = line_edits
         self.checklist = checklist
         self.keyword = [keyword]
-        self.expose_path = False     # print statement
+        self.expose_path = False  # print statement
+        self._params_image = []  # this gets filled in during the first run of ._coolfun
+
+        # same concept for the checklist, if no list is provided we take an empty list.
+        if self.checklist is None:
+            self.checklist = []
+
         # For the case of, for example, 'circlefind', there is no need for a radiotuple, since it is only applied
         # once. Thus, if it is not required, we will not set it.
         if radiotuple is not None:
@@ -133,13 +141,12 @@ class SliderClass:
         else:
             self.radio_image = None
 
-        # same concept for the checklist, if no list is provided we take an empty list.
-        if self.checklist is None:
-            self.checklist = []
         # _coolfun collects the data from the sliders and checkboxes and sends them to the movieclass
         self._coolfun = labwrap(self.keyword, function, self.getvalue)
         self._coolfun()  # call it to initialize all the line_edits.
-        self._params_circle = copy.copy(self._params_image)
+        # had to do it twice, else the calls dont check out
+        if radiotuple is not None:
+            self._params_circle = copy.copy(self._params_image)
 
         for slider in self.sliderlist:
             slider.valueChanged.connect(self._coolfun)
@@ -156,14 +163,12 @@ class SliderClass:
         Remember to define the list upfront, since when you start changing values, signals will be sent to '_cool_fun'
         and thus the 'self._params...' gets updated immediatley. Set 'expose_path' to True in  to see the effect.
         """
-        thelist = []
         if strz == "image":
             thelist = self._params_image
         elif strz == "circle":
             thelist = self._params_circle
         else:
             raise Exception(f"you managed to call 'goto_radio' with {strz}??")
-
 
         combolist = self.checklist + self.sliderlist
         print(f" this is the combolist {combolist}")

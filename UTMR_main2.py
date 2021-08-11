@@ -7,15 +7,13 @@ from PyQt5.QtCore import QTimer, QThreadPool
 from PyQt5.QtGui import QPixmap
 
 import classes.class_extra
-from classes.class_extra import SliderClass as SliderClass
 import classes.class_frameclass
 import classes.class_movieclass
 import classes.movieclass_2 as mvc2
 import functions.auxiliary
 import functions.circle_tracking.circle_finder
 from QT_Gui import gui_full
-from functions.image_processing.image_process import change_qpix as cqpx
-from functions.threed_projection import twod_movement as TwoDclass
+from classes.class_extra import SliderClass as SliderClass
 
 
 # the whole thing is just existing within this class.
@@ -30,9 +28,11 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.CurMov = mvc2.MovieUpdate()
         self.imlist = []
         radiotuple = (self.radioButton_image, self.radioButton_circle)
+        self.histogramx = list(range(0, 255))  # the x-range of the histogram
+        self.bargraph = pg.BarGraphItem()  # the histogram widget inside plotwidget (which is called self.histogram)
 
         # load pictures in
-        self.mr_image.setPixmap(QPixmap("./QT_Gui/images/baseimage.png"))
+        # self.mr_image.setPixmap(QPixmap("./QT_Gui/images/baseimage.png"))
         self.label_logo_uni.setPixmap((QPixmap("./QT_Gui/images/UTlogo.png")))
         self.lineEdit_save.isEnabled()
 
@@ -81,21 +81,21 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         sl_gfilter = [self.slider_g_size, self.slider_g_sigX, self.slider_g_sigY]
         le_gfilter = [self.lineEdit_g_size, self.lineEdit_g_sigx, self.lineEdit_g_sigY]
         self.SC_g_filter = SliderClass(
-            slides=sl_gfilter, line_edits=le_gfilter, function=self.CurMov.value_changed, keyword='g_filter',
+            slides=sl_gfilter, line_edits=le_gfilter, function=self.pre_value_changed, keyword='g_filter',
             radiotuple=radiotuple, checklist=[self.check_filter_g])
 
         # slider list for sobel
         sl_sobel = [self.slider_Skernel, self.slider_Sdst, self.slider_Sscale]
         le_sobel = [self.lineEdit_Skernel, self.lineEdit_Sdst, self.lineEdit_Sscale]
         self.My_sobel_slider = SliderClass(
-            slides=sl_sobel, line_edits=le_sobel, function=self.CurMov.value_changed, keyword='sobel',
-            radiotuple = radiotuple, checklist=[self.checkBox_sobel])
+            slides=sl_sobel, line_edits=le_sobel, function=self.pre_value_changed, keyword='sobel',
+            radiotuple=radiotuple, checklist=[self.checkBox_sobel])
 
         # slider list for canny
         sl_canny = [self.slider_Cthresh1, self.slider_Cthresh2]
         le_canny = [self.lineEdit_Cthresh1, self.lineEdit_Cthresh2]
         self.My_canny_slider = SliderClass(
-            slides=sl_canny, line_edits=le_canny, function=self.CurMov.value_changed, keyword='canny',
+            slides=sl_canny, line_edits=le_canny, function=self.pre_value_changed, keyword='canny',
             radiotuple=radiotuple, checklist=[self.checkBox_Canny])
 
         # slider list for circle finding
@@ -104,7 +104,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         le_cf = [self.lineEdit_dp_2, self.lineEdit_minDist_2, self.lineEdit_param1_2,
                  self.lineEdit_param2_2, self.lineEdit_minradius_2, self.lineEdit_maxradius_2]
         self.SC_circlefinder = SliderClass(
-            slides=sl_cf, line_edits=le_cf, function=self.CurMov.value_changed, keyword='circlefinder',
+            slides=sl_cf, line_edits=le_cf, function=self.pre_value_changed, keyword='circlefinder',
             radiotuple=None, checklist=[self.checkBox_circle])
 
         # running functions at start:
@@ -130,12 +130,12 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             return
         self.pb_play.setEnabled(True)
         self.pb_play.setToolTip("")
-        cropsize = [58, 428, 143, 513]  # im = im[58:428, 143:513]
+        cropsize = [58, 428, 243, 413]  # im = im[58:428, 143:513]
         self.imlist = functions.auxiliary.loadin(filelist, path, size=cropsize)
         self.CurMov.get_imlist(imlist=self.imlist)
         self.progress_bar.setMaximum(self.CurMov.maxframes)
-        self.update_all_things(getvalue=True)
-        #print(SliderClass.all_sliders)
+        self.update_all_things()
+        # print(SliderClass.all_sliders)
 
     def next_frame(self):
         # called when the timer says it is time for the next frame
@@ -143,11 +143,11 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.CurMov.get_frame()  # MovieClass method to go to the next frame index
         if self.progress_bar.value() != self.CurMov.frame_number:
             self.progress_bar.setValue(self.CurMov.frame_number)  # edit the progress bar
-        #print("next_frame")
+        # print("next_frame")
         self.update_all_things()
 
-    def pre_value_changed(self,key,fun):
-        self.CurMov.value_changed(key,fun)
+    def pre_value_changed(self, key, fun):
+        self.CurMov.value_changed(key, fun)
         if self.CurMov.currentframe is None:
             return
         self.update_all_things()
@@ -155,25 +155,23 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
     def progress_bar_fun(self):
         # called when you (or the machine) change the progress bar in the video player
         self.CurMov.frame_number = self.progress_bar.value()
+        # whenever current frame is changed, the used_parameters must be destroyed
         self.CurMov.currentframe = self.CurMov.imlist[self.CurMov.frame_number]
-        #print("progress_bar")
+        self.CurMov.used_parameters = {}
+
+        # print("progress_bar")
         self.update_all_things()
 
-
-    def update_all_things(self, getvalue=False):
+    def update_all_things(self):
         # called whenever the main screen should be updated
-        # display = cqpx(self.CurMov.currentframe)
-        display = self.CurMov.update()
-        self.mr_image.setPixmap(display)
+        main_image, histogram, b_filter, filtered, fourier, g_filter = self.CurMov.update()
 
-
-        #print("update_all")
-        #
-        # imagelist = []
-        # imagelist.append(self.CurMov.update())
-
-
-
+        self.histogram.clear()
+        self.histogram.addItem(pg.BarGraphItem(x=self.histogramx, height=histogram, width=5, brush='g'))
+        self.filter_image1.setPixmap(b_filter)
+        self.fourier_image.setPixmap(fourier)
+        self.filter_image_g.setPixmap(g_filter)
+        self.mr_image.setPixmap(filtered)
 
     def play_button(self):
         if self.timer.isActive():
@@ -200,7 +198,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             self.txtbox_dcmcont.clear()
             for element in filelist:
                 self.txtbox_dcmcont.append(element)
-        except:
+        except FileNotFoundError:
             self.txtbox_cmd.append("folder selection aborted")
 
     def convert(self):

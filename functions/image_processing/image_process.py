@@ -134,8 +134,7 @@ def float_uint8(fft_frame):
         frame_normalized = (fft_frame * 255) / np.max(fft_frame)  # normalized like this
         frame = frame_normalized.astype(np.uint8)
     elif fft_frame.dtype == np.dtype('uint8'):
-        frame = fft_frame
-        print("saved ya")
+        raise ValueError("expected float, got uint8?!")
     else:
         print("wrong datatype!")
         frame_normalized = (fft_frame * 255) / np.max(fft_frame)  # normalized like this

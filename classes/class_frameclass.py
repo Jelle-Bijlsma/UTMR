@@ -52,7 +52,10 @@ class FrameClass:
         # gls: brightness[0] boost[1]  lbound[2]  rbound[3]
 
     def calc_gls(self, new_slice_p: list):
-        # gls has two main functions. Brightness (#B) adjustment and Graylevel slicing.
+        """"
+        The calc_GLS provides settings on the brightness
+        """
+
         # easy reading by pulling the new slice parameters apart.
         bval = new_slice_p[0]
         boost = new_slice_p[1]

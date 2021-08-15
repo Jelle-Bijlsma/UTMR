@@ -95,7 +95,7 @@ class MovieUpdate:
         self.parameters[key] = fun()
         # print(self.parameters)
 
-    def update(self):
+    def update(self,boxes):
         para = self.parameters
         base_image = np.copy(self.currentframe)
 
@@ -129,7 +129,7 @@ class MovieUpdate:
         filtered_image2, fourier, = ipgun.apply_filter(parameters=para['g_filter'], filterz=g_filter,
                                                        image=filtered_image1)
         # call 2 edge function, to determine wheter canny or sobel is used...
-
+        edge_found = ipgun.edge_call(boxes,filtered_image2,para['canny'],para['sobel'])
 
         return cqpx(gls_image), histogram, cqpx(b_filter), cqpx(filtered_image2), cqpx(ipgun.prep_fft(fourier)), \
-               cqpx(g_filter)
+               cqpx(g_filter), cqpx(edge_found)

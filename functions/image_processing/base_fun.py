@@ -1,6 +1,6 @@
 import numpy as np
-from PyQt5 import QtGui
-
+from PyQt5 import QtGui, QtWidgets
+import cv2
 
 def calc_gls(image, parameters):
     """"
@@ -79,9 +79,18 @@ def apply_filter(parameters, image, filterz, *args):
     return float_uint8(filtered_image), fft_filtered_image
 
 
+def para_zero(value, name, replacement=1):
+    if value == 0:
+        print(f"{name} cannot be zero, set to: {replacement}")
+        return replacement
+    return value
+
+
 def b_filter(parameters, shape):
     truth, cutoff, order = parameters
-    y_dim, x_dim = shape
+    y_dim = para_zero(shape[0], "y in b_filter")
+    x_dim = para_zero(shape[1], "x in b_filter")
+
     x_max = x_dim / 2
     y_max = y_dim / 2
     x = np.arange(-x_max, x_max, 1)
@@ -94,8 +103,11 @@ def b_filter(parameters, shape):
     Z = (xterm + yterm) / 2
     return Z
 
+
 def g_filter(parameters, shape):
     truth, a, sigx, sigy = parameters
+    sigx = para_zero(sigx, "g_filter sigmax")
+    sigy = para_zero(sigy, "g_filter sigmay")
     y_dim, x_dim = shape
     x_max = x_dim / 2
     y_max = y_dim / 2
@@ -133,3 +145,148 @@ def prep_fft(fft_frame):
     fft_shift = np.fft.fftshift(fft_frame)
     fft_gl = np.log(np.abs(fft_shift) + 5)
     return fft_gl
+
+
+def edge_call(boxes,image,para_canny,para_sobel):
+    sobelbox = boxes[0]
+    cannybox = boxes[1]
+
+
+    true_canny = para_canny[0]
+    true_sobel = para_sobel[0]
+
+    if true_canny & true_sobel:
+        sobelbox.setChecked(False)
+        cannybox.setChecked(True)
+        print("there can be only one! (edge finder)")
+
+    if true_canny:
+        return cv2.Canny(image, para_canny[1], para_canny[2])
+    elif true_sobel:
+        return do_sobel(image, para_sobel[1:])
+    else:
+        return image
+        #raise Exception("how did you even get here? @edge_call")
+
+
+def do_sobel(frame,parameters):
+    """"
+    Left this in as a separate function for possibility of doing
+
+    """
+
+    ksize = parameters[0]
+    scale = parameters[1]
+    delta = parameters[2]
+
+    grad_x = cv2.Sobel(frame, cv2.CV_16S, 1, 0, ksize=ksize, scale=scale, delta=delta,
+                       borderType=cv2.BORDER_DEFAULT)
+    grad_y = cv2.Sobel(frame, cv2.CV_16S, 0, 1, ksize=ksize, scale=scale, delta=delta,
+                       borderType=cv2.BORDER_DEFAULT)
+
+    abs_grad_x = cv2.convertScaleAbs(grad_x)
+    abs_grad_y = cv2.convertScaleAbs(grad_y)
+    grad = cv2.addWeighted(abs_grad_x, 0.5, abs_grad_y, 0.5, 0)
+    # the gradient is shown in the main window, and in the third window we show the 'original' main
+    # print(f"sobel shape is{np.shape(grad_x)}")
+
+    # return float_uint8(grad)
+    return grad
+
+
+def do_canny(parameters,frame):
+    threshold1 = parameters[0]
+    threshold2 = parameters[1]
+    edges = cv2.Canny(frame, threshold1, threshold2)
+    # print(f"canny shape is{np.shape(edges)}")
+
+    # canny by default outputs 8bit.
+    # https://docs.opencv.org/3.4/dd/d1a/group__imgproc__feature.html#ga04723e007ed888ddf11d9ba04e2232de
+    return edges
+
+
+def get_pixel(event):
+    x = event.pos().x()
+    y = event.pos().y()
+    # h, w = self.CurMov.get_og_frame().shape
+    # xtot = self.mr_image.width()
+    # ytot = self.mr_image.height()
+    # x = int((x / xtot) * w)
+    # y = int((y / ytot) * h)
+    print(f"rescaled x = {x}, rescaled y = {y}")
+    coords = f"x:{x}, y:{y}"
+    # self.coords = (x, y)
+    # self.lineEdit_coords.setText(coords)
+
+    def morphstring_add(self, stringz):
+        """"
+        function called when new text is added to the 'textEdit_morph' box in the morphology tab.
+        TextColor is set to black, data is pulled from the 'spinBox' regarding kernel size
+        and the comboBox for kernel shape.
+
+        cv2.getStructuringElement uses a '0,1,2' notation for sq. rect. ellipse, thus the index of the
+        dropdown menu corresponds to these.
+        """
+        self.textEdit_morph.setTextColor(QColor(0, 0, 0, 255))
+        stringz += f" kernel: {self.spinBox.value()} shape: {self.comboBox.currentIndex()}"
+        self.textEdit_morph.append(stringz)
+
+    def startmorph(self):
+        error = self.checkmorph()
+        if error == 1:
+            # if there is an error in the checker, uncheck the checkbox
+            self.checkBox_morph.setChecked(True)
+            self.morphstatus = False
+            self.update_all_things()
+            return
+
+        # dont think this applies now..
+        if self.checkBox_morph.isChecked() is not False:
+            # if the code is called when the checkbox is unchecked, return
+            self.morphstatus = False
+            self.update_all_things()
+            return
+
+        self.morphstatus = True
+        self.update_all_things()
+
+    def checkmorph(self):
+        """"
+        Checking function to see if the operation is spelled correctly, and if not, color the corresponding
+        operation red. The addition of kernel + size was done later, and thus no error checking exists for that
+        yet..
+        """
+        errorcode = 0
+        cursor_pos = 0
+        clrR = QtGui.QColor(255, 0, 0, 255)
+        clrB = QtGui.QColor(0, 0, 0, 255)
+        cursor = self.textEdit_morph.textCursor()
+
+        for element in self.textEdit_morph.toPlainText().split('\n'):
+            # split the full textEdit_morph up into newlines
+            starter = element.split(' ')
+            # split the newlines up into words
+            if starter[0] in self.valid_ops:
+                # we color it black, in case it previously has been colored red.
+                # could color all black on each iteration and recolor all the reds. too bad!
+                cursor.setPosition(cursor_pos)
+                cursor.movePosition(20, 1, 1)
+                self.textEdit_morph.setTextCursor(cursor)
+                self.textEdit_morph.setTextColor(clrB)
+                cursor_pos += len(element) + 1
+                # print(cursor_pos)
+                cursor.setPosition(0)
+                # calls to setTextCursor are made to move the cursor to the actual position on screen
+                self.textEdit_morph.setTextCursor(cursor)
+            else:
+                # maybe move next 7 lines into morp, and call it for this 1 and the previous 1?
+                cursor.setPosition(cursor_pos)
+                cursor.movePosition(20, 1, 1)
+                self.textEdit_morph.setTextCursor(cursor)
+                self.textEdit_morph.setTextColor(clrR)
+                cursor_pos += len(element) + 1
+                cursor.setPosition(0)
+                self.textEdit_morph.setTextCursor(cursor)
+                print("something is wrong!!")
+                errorcode = 1
+        return errorcode

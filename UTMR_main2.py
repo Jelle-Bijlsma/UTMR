@@ -164,14 +164,16 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
 
     def update_all_things(self):
         # called whenever the main screen should be updated
-        main_image, histogram, b_filter, filtered, fourier, g_filter = self.CurMov.update()
+        check_input = [self.checkBox_sobel, self.checkBox_Canny]
+        main_image, histogram, b_filter, filtered, fourier, g_filter, edge_pic =\
+            self.CurMov.update(check_input)
 
         self.histogram.clear()
         self.histogram.addItem(pg.BarGraphItem(x=self.histogramx, height=histogram, width=5, brush='g'))
         self.filter_image1.setPixmap(b_filter)
         self.fourier_image.setPixmap(fourier)
         self.filter_image_g.setPixmap(g_filter)
-        self.mr_image.setPixmap(filtered)
+        self.mr_image.setPixmap(edge_pic)
 
     def play_button(self):
         if self.timer.isActive():

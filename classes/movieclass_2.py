@@ -96,9 +96,23 @@ class MovieUpdate:
         self.parameters[key] = fun()
         # print(self.parameters)
 
-    def update(self,boxes,morph_vars,segment_state, circ_state):
+    def update(self, boxes, morph_vars, segment_state, circ_state):
         para = self.parameters
+
+        # we do this to enter the second row of keys into the dictionary.
+        # they dont appear by themselves so they are forced in.
+        if 'GLS2' not in para:
+            iterdic = copy.copy(para)
+            for key in iterdic:
+                key2 = key + "2"
+                para[key2] = para[key]
+            #print(para)
         base_image = np.copy(self.currentframe)
+        # print(self.parameters)
+        output = [list,list]
+        #           [self.morph_state, self.valid_ops, self.checkBox_morph]
+        morph_vars1 = [morph_vars[0][0], morph_vars[1], morph_vars[2]]
+        morph_vars2 = [morph_vars[0][1], morph_vars[1], morph_vars[2]]
 
         """"
         This part is left in since it refers to the 'check_equal' which is a function to check whether calcs
@@ -128,15 +142,47 @@ class MovieUpdate:
         # 'fourier' is raw complex128.
         # para['b_filter'] is only needed for the checkbox
         filtered_image1, fourier, = ipgun.apply_filter(parameters=para['b_filter'], filterz=b_filter,
-                                                                 image=gls_image)
+                                                       image=gls_image)
         filtered_image2, fourier, = ipgun.apply_filter(parameters=para['g_filter'], filterz=g_filter,
                                                        image=filtered_image1)
         # call 2 edge function, to determine wheter canny or sobel is used...
-        edge_found, self.edge_status = ipgun.edge_call(boxes,filtered_image2,para['canny'],para['sobel'])
-        no_edgefinding = np.all(np.sort(edge_found)==np.sort(filtered_image2))
-        morph_img = ipgun.do_morph(edge_found,morph_vars,no_edgefinding)
-        mask, masked = ipgun.flood(morph_img,base_image,segment_state)
+        edge_found, self.edge_status = ipgun.edge_call(boxes, filtered_image2, para['canny'], para['sobel'])
+        no_edgefinding = np.all(np.sort(edge_found) == np.sort(filtered_image2))
+        morph_img = ipgun.do_morph(edge_found, morph_vars1, no_edgefinding)
+        mask, masked = ipgun.flood(morph_img, base_image, segment_state)
 
-        return cqpx(gls_image), histogram, cqpx(b_filter), cqpx(filtered_image2), cqpx(ipgun.prep_fft(fourier)), \
-               cqpx(g_filter), cqpx(edge_found), cqpx(morph_img), cqpx(mask), cqpx(masked), cqpx(base_image)
+        #              0                    1              2            3               4
+        output[0] = [cqpx(base_image), cqpx(gls_image), histogram, cqpx(b_filter), cqpx(filtered_image2),
+        #              5                    6              7                8
+        cqpx(ipgun.prep_fft(fourier)), cqpx(g_filter), cqpx(edge_found), cqpx(morph_img),
+        #   9           10
+        cqpx(mask), cqpx(masked)]
+
+        # Now we do everythang again........
+        gls_image, histogram = ipgun.calc_gls(masked, para['GLS2'])
+        b_filter = ipgun.b_filter(
+            parameters=para['b_filter2'], shape=np.shape(self.currentframe))
+        g_filter = ipgun.g_filter(
+            parameters=para['g_filter2'], shape=np.shape(self.currentframe))
+        # 'fourier' is raw complex128.
+        # para['b_filter'] is only needed for the checkbox
+        filtered_image1, fourier, = ipgun.apply_filter(parameters=para['b_filter2'], filterz=b_filter,
+                                                       image=gls_image)
+        filtered_image2, fourier, = ipgun.apply_filter(parameters=para['g_filter2'], filterz=g_filter,
+                                                       image=filtered_image1)
+        # call 2 edge function, to determine wheter canny or sobel is used...
+        edge_found, self.edge_status = ipgun.edge_call(boxes, filtered_image2, para['canny2'], para['sobel2'])
+        no_edgefinding = np.all(np.sort(edge_found) == np.sort(filtered_image2))
+        morph_img = ipgun.do_morph(edge_found, morph_vars2, no_edgefinding)
+
+        # circle finding
+        circle_im = ipgun.circlefind(para['circlefinder'],morph_img)
+
+        #               0               1           2                   3                       4
+        output[1] = [cqpx(gls_image), histogram, cqpx(b_filter), cqpx(filtered_image2), cqpx(ipgun.prep_fft(fourier)),
+        #               5                 6                  7                 8
+                    cqpx(g_filter), cqpx(edge_found), cqpx(morph_img), cqpx(circle_im)]
+
+
+        return output
 

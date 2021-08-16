@@ -193,28 +193,35 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             # only done on initializer run
             self.morph_state[0][0] = self.checkBox_morph.isChecked()
             self.morph_state[0][1] = self.textEdit_morph.toPlainText()
-            print("he be setting doe")
-        print(f"lets talk abt morph_state: {self.morph_state[0]}")
-        morph_vars = [self.morph_state[0], self.valid_ops, self.checkBox_morph]
+        morph_vars = [self.morph_state, self.valid_ops, self.checkBox_morph]
         segment_state = [self.checkBox_segment, self.coords]
         circ_state = []
-        main_image, histogram, b_filter, filtered, fourier, g_filter, edge_pic, morph_img, mask, masked,\
-            base_img= \
-            self.CurMov.update(check_input, morph_vars,segment_state,circ_state)
+        output = self.CurMov.update(check_input, morph_vars,segment_state,circ_state)
 
         # to implement:!
         # Depending on the RADIOBUTTON: show different images..
 
-        self.histogram.clear()
-        self.histogram.addItem(pg.BarGraphItem(x=self.histogramx, height=histogram, width=5, brush='g'))
-        self.filter_image1.setPixmap(b_filter)
-        self.fourier_image.setPixmap(fourier)
-        self.filter_image_g.setPixmap(g_filter)
-        self.label_qim_tester.setPixmap(filtered)
-        self.mr_image_2.setPixmap(base_img)
-        self.mr_image.setPixmap(masked)
-        self.label_mask_im.setPixmap(mask)
 
+
+        if self.radioButton_image.isChecked():
+            self.histogram.clear()
+            self.histogram.addItem(pg.BarGraphItem(x=self.histogramx, height=output[0][2], width=5, brush='g'))
+            self.filter_image1.setPixmap(output[0][3])
+            self.label_qim_tester.setPixmap(output[0][4])
+            self.fourier_image.setPixmap(output[0][5])
+            self.filter_image_g.setPixmap(output[0][6])
+            self.label_mask_im.setPixmap(output[0][9])
+            self.mr_image.setPixmap(output[0][10])
+        else:
+            self.histogram.clear()
+            self.histogram.addItem(pg.BarGraphItem(x=self.histogramx, height=output[1][1], width=5, brush='g'))
+            self.filter_image1.setPixmap(output[1][2])
+            self.label_qim_tester.setPixmap(output[1][3])
+            self.fourier_image.setPixmap(output[1][4])
+            self.filter_image_g.setPixmap(output[1][5])
+            self.mr_image.setPixmap(output[1][8])
+
+        self.mr_image_2.setPixmap(output[0][0])
         # now you want to do update2, on the improved and cutout frame..
 
     def morphstring_add(self, stringz):
@@ -246,7 +253,6 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             self.morph_state[0][0] = self.checkBox_morph.isChecked()
         else:
             self.morph_state[1][0] = self.checkBox_morph.isChecked()
-            print(f"we out here: {self.morph_state[1][0]}")
 
         for element in self.textEdit_morph.toPlainText().split('\n'):
             # split the full textEdit_morph up into newlines
@@ -275,6 +281,13 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
                 self.textEdit_morph.setTextCursor(cursor)
                 print("something is wrong!!")
                 self.checkBox_morph.setChecked(False)
+
+        if self.radioButton_circle.isChecked():
+            self.morph_state[1][1] = self.textEdit_morph.toPlainText()
+        else:
+            self.morph_state[0][1] = self.textEdit_morph.toPlainText()
+
+
         self.update_all_things()
 
     def morph_switch(self):

@@ -1,6 +1,8 @@
 import numpy as np
 from PyQt5 import QtGui, QtWidgets
 import cv2
+from scipy import interpolate
+
 
 def calc_gls(image, parameters):
     """"
@@ -209,7 +211,7 @@ def do_morph(img, morph_vars, no_edgefinding):
     valid_ops: list = morph_vars[1]
     checkbox: QtWidgets.QCheckBox = morph_vars[2]
 
-    print(f"we got morph_vars[0] it is: {morph_vars[0]}, and its type is {type(morph_vars[0])}")
+    #print(f"we got morph_vars[0] it is: {morph_vars[0]}, and its type is {type(morph_vars[0])}")
 
     if morph_vars[0][0] is True:
         if (no_edgefinding == np.bool_(False)):
@@ -240,7 +242,7 @@ def do_morph(img, morph_vars, no_edgefinding):
         else:
             raise Exception("np.bool_ is different from python bool!")
     else:
-        print("simply not true")
+        # print("no morph today")
         return img
 
 
@@ -267,3 +269,72 @@ def flood(img,original,params):
         return mask,masked
     else:
         return np.zeros((10, 10),dtype='uint8'), img
+
+def circlefind(parameters: list, image: np.ndarray):
+    circ_bool = parameters[0]
+    dp = parameters[1] / 25  # since PyQt does not allow for non int slider values, they have to be created.
+    minDist = parameters[2]
+    param1 = parameters[3]
+    param2 = parameters[4]
+    minradius = parameters[5]
+    maxradius = parameters[6]
+
+    if circ_bool is False:
+        return image
+
+    imagepre = cv2.rotate(np.copy(image), cv2.ROTATE_90_CLOCKWISE)
+    x,y = imagepre.shape
+    scalefactor = 4
+    imagez = cv2.resize(imagepre,(y*scalefactor,x*scalefactor))
+    circles = cv2.HoughCircles(imagez, cv2.HOUGH_GRADIENT, dp=dp, minDist=minDist, param1=param1, param2=param2,
+                               minRadius=minradius, maxRadius=maxradius)
+
+    if circles is not None:
+        # since the hough detects the circles randomly, we have the need to sort them in ascending order
+        # for the spline to work
+        if len(circles[0]) < 2:
+            print(f"not enough circles {circles}")
+            print(len(circles[0]))
+            return image
+        conlist = circles[0, :, 0:2]
+        mysort = sorted(conlist, key=lambda p: p[0])
+        mysort = np.array(mysort)
+        x = mysort[:, 0]
+        y = mysort[:, 1]
+        # create spline
+        spl = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
+        spl.set_smoothing_factor(0.5)
+        # by creating a dense line grid to plot the spline over, we get smooth output
+        xnew2 = np.linspace(np.min(x) - 20, np.max(x) + 20, num=60, endpoint=True)
+        ynew2 = spl(xnew2)
+
+        # this construction turns the separate xnew2 and ynew2 into an array of like this:
+        # [[x0, y0]
+        # [x1, y1]] etc..
+        thelist = np.array([[x, y] for x, y in zip(xnew2, ynew2)], dtype="int")
+
+        # we now want to round the list, to make them into accessible pixel values for plotting.
+        # by drawing straight lines between each pixel value, we can recreate the spline in an image.
+        firsthit = False
+        lineting = []  # keeps pycharm happy
+        for element in thelist:
+            if firsthit is True:
+                # drawing the line takes int's in tuple form.
+                lineting = (lineting[0], lineting[1])
+                elementa = (element[0], element[1])
+                cv2.line(img=imagez, pt1=lineting, pt2=elementa, color=255, thickness=5)
+                lineting = element
+            else:
+                lineting = element
+                firsthit = True
+
+        # we draw the circles where we found them.
+        # convert the (x, y) coordinates and radius of the circles to integers
+        circles = np.round(circles[0, :]).astype("int")
+        # loop over the (x, y) coordinates and radius of the circles
+        for (x, y, r) in circles:
+            # draw the circle in the output image, then draw a rectangle
+            # corresponding to the center of the circle
+            cv2.circle(imagez, (x, y), r, 125,4)
+
+    return cv2.rotate(imagez,cv2.ROTATE_90_COUNTERCLOCKWISE)

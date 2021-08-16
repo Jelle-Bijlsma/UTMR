@@ -151,7 +151,8 @@ class SliderClass:
         for slider in self.sliderlist:
             slider.valueChanged.connect(self._coolfun)
         for checkbox in self.checklist:
-            checkbox.clicked.connect(self._coolfun)
+            # remember checkboxes take the .stateChanged signal not pressed/clicked or whatever
+            checkbox.stateChanged.connect(self._coolfun)
 
         tracker = 0
         for line_edit in line_edits:
@@ -171,7 +172,7 @@ class SliderClass:
             raise Exception(f"you managed to call 'goto_radio' with {strz}??")
 
         combolist = self.checklist + self.sliderlist
-        print(f" this is the combolist {combolist}")
+        # print(f" this is the combolist {combolist}")
         self.getvalue()  # a little bit hacky trick to get the keyvalue to update properly.
         for element, iterator in zip(combolist, range(len(combolist))):
             if isinstance(element, QtWidgets.QCheckBox):

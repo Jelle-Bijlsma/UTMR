@@ -4,7 +4,7 @@ import sys
 import pyqtgraph as pg
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QTimer, QThreadPool
-from PyQt5.QtGui import QPixmap
+from PyQt5.QtGui import QPixmap, QColor
 
 import classes.class_extra
 import classes.class_frameclass
@@ -27,9 +27,22 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.threadpool = QThreadPool()
         self.CurMov = mvc2.MovieUpdate()
         self.imlist = []
-        radiotuple = (self.radioButton_image, self.radioButton_circle)
         self.histogramx = list(range(0, 255))  # the x-range of the histogram
         self.bargraph = pg.BarGraphItem()  # the histogram widget inside plotwidget (which is called self.histogram)
+        self.morphstatus = False
+        self.floodparam = False
+        self.radio_circle = False
+        self.radio_image = True
+        self.circleparam = False
+        self.coords = None
+        self.valid_ops = ["dilate", "erosion", "m_grad", "blackhat", "whitehat"]
+        radiotuple = (self.radioButton_image, self.radioButton_circle)
+
+        #                       image = 0       circle = 1
+        self.morph_state = [[False, "image"], [False, "dilate kernel: 7 shape: 0"]]
+        self.radioButton_image.toggled.connect(self.morph_switch)
+        # .radioButton_circle.toggled.connect(self.morph_switch)
+
 
         # load pictures in
         # self.mr_image.setPixmap(QPixmap("./QT_Gui/images/baseimage.png"))
@@ -62,6 +75,17 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.actionImage_processing.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(1))
         self.actionDicom_Edit.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(2))
         self.actionCircle_Tracking.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(3))
+
+        # morphology:
+        self.dilation.clicked.connect(lambda: self.morphstring_add("dilate"))
+        self.erosion.clicked.connect(lambda: self.morphstring_add("erosion"))
+        self.m_grad.clicked.connect(lambda: self.morphstring_add("m_grad"))
+        self.blackhat.clicked.connect(lambda: self.morphstring_add("blackhat"))
+        self.white_hat.clicked.connect(lambda: self.morphstring_add("whitehat"))
+
+        self.checkBox_morph.stateChanged.connect(self.startmorph)
+        self.mr_image.mousePressEvent = self.get_pixel
+        self.checkBox_segment.stateChanged.connect(self.update_all_things)
 
         # slider list for the GLS
         sl_gls = [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
@@ -165,15 +189,126 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
     def update_all_things(self):
         # called whenever the main screen should be updated
         check_input = [self.checkBox_sobel, self.checkBox_Canny]
-        main_image, histogram, b_filter, filtered, fourier, g_filter, edge_pic =\
-            self.CurMov.update(check_input)
+        if self.morph_state[0][1] == "image":
+            # only done on initializer run
+            self.morph_state[0][0] = self.checkBox_morph.isChecked()
+            self.morph_state[0][1] = self.textEdit_morph.toPlainText()
+            print("he be setting doe")
+        print(f"lets talk abt morph_state: {self.morph_state[0]}")
+        morph_vars = [self.morph_state[0], self.valid_ops, self.checkBox_morph]
+        segment_state = [self.checkBox_segment, self.coords]
+        circ_state = []
+        main_image, histogram, b_filter, filtered, fourier, g_filter, edge_pic, morph_img, mask, masked,\
+            base_img= \
+            self.CurMov.update(check_input, morph_vars,segment_state,circ_state)
+
+        # to implement:!
+        # Depending on the RADIOBUTTON: show different images..
 
         self.histogram.clear()
         self.histogram.addItem(pg.BarGraphItem(x=self.histogramx, height=histogram, width=5, brush='g'))
         self.filter_image1.setPixmap(b_filter)
         self.fourier_image.setPixmap(fourier)
         self.filter_image_g.setPixmap(g_filter)
-        self.mr_image.setPixmap(edge_pic)
+        self.label_qim_tester.setPixmap(filtered)
+        self.mr_image_2.setPixmap(base_img)
+        self.mr_image.setPixmap(masked)
+        self.label_mask_im.setPixmap(mask)
+
+        # now you want to do update2, on the improved and cutout frame..
+
+    def morphstring_add(self, stringz):
+        """"
+        function called when new text is added to the 'textEdit_morph' box in the morphology tab.
+        TextColor is set to black, data is pulled from the 'spinBox' regarding kernel size
+        and the comboBox for kernel shape.
+
+        cv2.getStructuringElement uses a '0,1,2' notation for sq. rect. ellipse, thus the index of the
+        dropdown menu corresponds to these.
+        """
+        self.textEdit_morph.setTextColor(QColor(0, 0, 0, 255))
+        stringz += f" kernel: {self.spinBox.value()} shape: {self.comboBox.currentIndex()}"
+        self.textEdit_morph.append(stringz)
+
+
+    def startmorph(self):
+        """"
+        Checking function to see if the operation is spelled correctly, and if not, color the corresponding
+        operation red. The addition of kernel + size was done later, and thus no error checking exists for that
+        yet..
+        """
+        cursor_pos = 0
+        clrR = QColor(255, 0, 0, 255)
+        clrB = QColor(0, 0, 0, 255)
+        cursor = self.textEdit_morph.textCursor()
+
+        if self.radioButton_image.isChecked():
+            self.morph_state[0][0] = self.checkBox_morph.isChecked()
+        else:
+            self.morph_state[1][0] = self.checkBox_morph.isChecked()
+            print(f"we out here: {self.morph_state[1][0]}")
+
+        for element in self.textEdit_morph.toPlainText().split('\n'):
+            # split the full textEdit_morph up into newlines
+            starter = element.split(' ')
+            # split the newlines up into words
+            if starter[0] in self.valid_ops:
+                # we color it black, in case it previously has been colored red.
+                # could color all black on each iteration and recolor all the reds. too bad!
+                cursor.setPosition(cursor_pos)
+                cursor.movePosition(20, 1, 1)
+                self.textEdit_morph.setTextCursor(cursor)
+                self.textEdit_morph.setTextColor(clrB)
+                cursor_pos += len(element) + 1
+                # print(cursor_pos)
+                cursor.setPosition(0)
+                # calls to setTextCursor are made to move the cursor to the actual position on screen
+                self.textEdit_morph.setTextCursor(cursor)
+            else:
+                # maybe move next 7 lines into morp, and call it for this 1 and the previous 1?
+                cursor.setPosition(cursor_pos)
+                cursor.movePosition(20, 1, 1)
+                self.textEdit_morph.setTextCursor(cursor)
+                self.textEdit_morph.setTextColor(clrR)
+                cursor_pos += len(element) + 1
+                cursor.setPosition(0)
+                self.textEdit_morph.setTextCursor(cursor)
+                print("something is wrong!!")
+                self.checkBox_morph.setChecked(False)
+        self.update_all_things()
+
+    def morph_switch(self):
+        # use self.morph_state to transfer
+        # state checkboxes being checked
+        # and text in textbox
+        if self.radioButton_image.isChecked() == True:
+            # recording values
+            self.morph_state[1][0] = self.checkBox_morph.isChecked()
+            self.morph_state[1][1] = self.textEdit_morph.toPlainText()
+            # setting them
+            self.checkBox_morph.setChecked(self.morph_state[0][0])
+            self.textEdit_morph.setText(self.morph_state[0][1])
+
+        if self.radioButton_circle.isChecked() == True:
+            # recording values
+            self.morph_state[0][0] = self.checkBox_morph.isChecked()
+            self.morph_state[0][1] = self.textEdit_morph.toPlainText()
+            # setting them
+            self.checkBox_morph.setChecked(self.morph_state[1][0])
+            self.textEdit_morph.setText(self.morph_state[1][1])
+
+    def get_pixel(self, event):
+        x = event.pos().x()
+        y = event.pos().y()
+        h, w = self.CurMov.currentframe.shape
+        xtot = self.mr_image.width()
+        ytot = self.mr_image.height()
+        x = int((x / xtot) * w)
+        y = int((y / ytot) * h)
+        print(f"rescaled x = {x}, rescaled y = {y}")
+        coords = f"x:{x}, y:{y}"
+        self.coords = (x, y)
+        self.lineEdit_coords.setText(coords)
 
     def play_button(self):
         if self.timer.isActive():

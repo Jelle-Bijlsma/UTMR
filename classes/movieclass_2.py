@@ -75,6 +75,7 @@ class MovieUpdate:
     def get_frame(self):
         """"
         Getframe will produce a new frame in the 'self.currentframe'
+        progress_bar_fun in MAIN can also edit the 'currentframe'
         """
         if self._imloaded is False:
             raise Exception("call 'get_imlist' first")
@@ -95,7 +96,7 @@ class MovieUpdate:
         self.parameters[key] = fun()
         # print(self.parameters)
 
-    def update(self,boxes):
+    def update(self,boxes,morph_vars,segment_state, circ_state):
         para = self.parameters
         base_image = np.copy(self.currentframe)
 
@@ -117,6 +118,8 @@ class MovieUpdate:
             ipgun.calc_gls, expected_outcome, 'GLS', image=base_image, parameters=para['GLS'])
         """
 
+        # print("new update \n")
+
         gls_image, histogram = ipgun.calc_gls(base_image, para['GLS'])
         b_filter = ipgun.b_filter(
             parameters=para['b_filter'], shape=np.shape(self.currentframe))
@@ -129,7 +132,11 @@ class MovieUpdate:
         filtered_image2, fourier, = ipgun.apply_filter(parameters=para['g_filter'], filterz=g_filter,
                                                        image=filtered_image1)
         # call 2 edge function, to determine wheter canny or sobel is used...
-        edge_found = ipgun.edge_call(boxes,filtered_image2,para['canny'],para['sobel'])
+        edge_found, self.edge_status = ipgun.edge_call(boxes,filtered_image2,para['canny'],para['sobel'])
+        no_edgefinding = np.all(np.sort(edge_found)==np.sort(filtered_image2))
+        morph_img = ipgun.do_morph(edge_found,morph_vars,no_edgefinding)
+        mask, masked = ipgun.flood(morph_img,base_image,segment_state)
 
         return cqpx(gls_image), histogram, cqpx(b_filter), cqpx(filtered_image2), cqpx(ipgun.prep_fft(fourier)), \
-               cqpx(g_filter), cqpx(edge_found)
+               cqpx(g_filter), cqpx(edge_found), cqpx(morph_img), cqpx(mask), cqpx(masked), cqpx(base_image)
+

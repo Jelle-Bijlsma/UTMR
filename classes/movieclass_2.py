@@ -1,5 +1,6 @@
 import copy
 
+import cv2
 import numpy as np
 
 import functions.image_processing.base_fun as ipgun
@@ -60,6 +61,15 @@ class MovieUpdate:
         self.g_filter = []
         self.fourier = []
         self.filtered_image1 = []
+
+        t1 = cv2.imread("./data/templates/scale1.png",0)
+        t2 = cv2.imread("./data/templates/scale2.png",0)
+        self.template_list = [t1,t2]
+        # t3
+        #
+        # t4
+        # t5
+        # t6
 
     def get_imlist(self, imlist):
         """
@@ -177,11 +187,12 @@ class MovieUpdate:
 
         # circle finding
         circle_im = ipgun.circlefind(para['circlefinder'],morph_img)
+        template = ipgun.templatematch(morph_img,para['template'],self.template_list)
 
         #               0               1           2                   3                       4
         output[1] = [cqpx(gls_image), histogram, cqpx(b_filter), cqpx(filtered_image2), cqpx(ipgun.prep_fft(fourier)),
-        #               5                 6                  7                 8
-                    cqpx(g_filter), cqpx(edge_found), cqpx(morph_img), cqpx(circle_im)]
+        #               5                 6                  7                 8                9
+                    cqpx(g_filter), cqpx(edge_found), cqpx(morph_img), cqpx(circle_im), cqpx(template)]
 
 
         return output

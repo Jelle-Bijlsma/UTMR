@@ -158,9 +158,11 @@ def edge_call(boxes,image,para_canny,para_sobel):
     true_sobel = para_sobel[0]
 
     if true_canny & true_sobel:
-        sobelbox.setChecked(False)
-        cannybox.setChecked(True)
-        print("there can be only one! (edge finder)")
+        # sobelbox.setChecked(False)
+        # cannybox.setChecked(True)
+        # print("there can be only one! (edge finder)")
+        return do_canny(para_canny[1:],do_sobel(image,para_sobel[1:])), True
+
 
     if true_canny:
         return cv2.Canny(image, para_canny[1], para_canny[2]), True
@@ -292,17 +294,37 @@ def circlefind(parameters: list, image: np.ndarray):
     if circles is not None:
         # since the hough detects the circles randomly, we have the need to sort them in ascending order
         # for the spline to work
-        if len(circles[0]) < 2:
-            print(f"not enough circles {circles}")
-            print(len(circles[0]))
+        if len(circles[0]) < 3:
+            #print(f"not enough circles {circles}")
+            #print(len(circles[0]))
             return image
         conlist = circles[0, :, 0:2]
+        #print(f"conlist: {conlist}")
         mysort = sorted(conlist, key=lambda p: p[0])
         mysort = np.array(mysort)
         x = mysort[:, 0]
         y = mysort[:, 1]
         # create spline
         spl = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
+
+        # if you need to pop due to too many circles youre doing sth wrong
+        # try:
+        #     spl = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
+        # except ValueError:
+        #     count = 0
+        #     newsort = []
+        #     for x,y in mysort:
+        #         if count == 0:
+        #             count += 1
+        #             continue
+        #         if mysort[count-1][0] != mysort[count][0]:
+        #             newsort.append(mysort[count-1])
+        #             if count == len(mysort):
+        #                 newsort.append(mysort[count])
+        #     x = newsort[:, 0]
+        #     y = newsort[:, 1]
+        #     spl = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
+
         spl.set_smoothing_factor(0.5)
         # by creating a dense line grid to plot the spline over, we get smooth output
         xnew2 = np.linspace(np.min(x) - 20, np.max(x) + 20, num=60, endpoint=True)
@@ -333,8 +355,25 @@ def circlefind(parameters: list, image: np.ndarray):
         circles = np.round(circles[0, :]).astype("int")
         # loop over the (x, y) coordinates and radius of the circles
         for (x, y, r) in circles:
+            print("drawing")
             # draw the circle in the output image, then draw a rectangle
             # corresponding to the center of the circle
             cv2.circle(imagez, (x, y), r, 125,4)
 
     return cv2.rotate(imagez,cv2.ROTATE_90_COUNTERCLOCKWISE)
+
+def templatematch(img,parameters,template_list):
+    _dobool = parameters[0]
+    treshold = parameters[1]/100
+    plt_im = np.copy(img)
+
+    if _dobool is False:
+        return img
+
+    for template in template_list:
+        w,h = template.shape
+        res = cv2.matchTemplate(img,template,cv2.TM_CCOEFF_NORMED)
+        loc = np.where(res >= treshold)
+        for pt in zip(*loc[::-1]):
+            cv2.rectangle(plt_im,pt,(pt[0] + w,pt[1]+h),(200,0,0),2)
+    return plt_im

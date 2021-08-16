@@ -131,6 +131,11 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             slides=sl_cf, line_edits=le_cf, function=self.pre_value_changed, keyword='circlefinder',
             radiotuple=None, checklist=[self.checkBox_circle])
 
+        sl_tm = [self.slider_template]
+        le_tm = [self.lineEdit_template]
+        self.SC_template = SliderClass(slides=sl_tm,line_edits=le_tm, function=self.pre_value_changed,
+                                       keyword='template',radiotuple=None,checklist=[self.checkBox_template])
+
         # running functions at start:
         self.filebrowse_png(True)  # load in all images and go through update cycle
 
@@ -219,7 +224,10 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             self.label_qim_tester.setPixmap(output[1][3])
             self.fourier_image.setPixmap(output[1][4])
             self.filter_image_g.setPixmap(output[1][5])
-            self.mr_image.setPixmap(output[1][8])
+            if self.checkBox_template.isChecked():
+                self.mr_image.setPixmap(output[1][9])
+            else:
+                self.mr_image.setPixmap(output[1][8])
 
         self.mr_image_2.setPixmap(output[0][0])
         # now you want to do update2, on the improved and cutout frame..

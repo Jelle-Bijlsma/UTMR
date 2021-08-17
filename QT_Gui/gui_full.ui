@@ -1055,17 +1055,17 @@
        <enum>Qt::Horizontal</enum>
       </property>
      </widget>
-     <widget class="QLineEdit" name="lineEdit_4">
+     <widget class="QLineEdit" name="lineEdit_params">
       <property name="geometry">
        <rect>
         <x>780</x>
         <y>900</y>
-        <width>251</width>
+        <width>281</width>
         <height>25</height>
        </rect>
       </property>
       <property name="text">
-       <string>&quot;./filepath/to/some/file&quot;</string>
+       <string>./data/parameters/params.txt</string>
       </property>
      </widget>
      <widget class="QLabel" name="fourier_image">
@@ -5839,7 +5839,7 @@ p, li { white-space: pre-wrap; }
        <string notr="true">buttonGroup</string>
       </attribute>
      </widget>
-     <widget class="QPushButton" name="pushButton">
+     <widget class="QPushButton" name="pb_load_params">
       <property name="geometry">
        <rect>
         <x>780</x>
@@ -5852,7 +5852,7 @@ p, li { white-space: pre-wrap; }
        <string>Load params</string>
       </property>
      </widget>
-     <widget class="QPushButton" name="pushButton_2">
+     <widget class="QPushButton" name="pb_save_params">
       <property name="geometry">
        <rect>
         <x>919</x>

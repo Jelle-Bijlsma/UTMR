@@ -60,7 +60,7 @@ def change_qpix(frame: np.array([])):
         # print(frame.shape)
         if c == 3:
             qim = QtGui.QImage(frame.data.tobytes(), h, w, frame.strides[0], QtGui.QImage.Format_RGB888)
-            print("we in rgb")
+            # print("we in rgb")
         elif c == 1:
             qim = QtGui.QImage(frame.data.tobytes(), h, w, h, QtGui.QImage.Format_Indexed8)
         else:

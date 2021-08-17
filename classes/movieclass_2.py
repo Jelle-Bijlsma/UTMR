@@ -103,7 +103,9 @@ class MovieUpdate:
         function is called through the update sliderclass
         """
         key = "".join(key)
+        # the value of the dict key is the evaluation of the given function
         self.parameters[key] = fun()
+        #print("wrote a key")
         # print(self.parameters)
 
     def update(self, boxes, morph_vars, segment_state, circ_state):
@@ -116,7 +118,7 @@ class MovieUpdate:
             for key in iterdic:
                 key2 = key + "2"
                 para[key2] = para[key]
-            #print(para)
+            print("we failed SON4")
         base_image = np.copy(self.currentframe)
         # print(self.parameters)
         output = [list,list]

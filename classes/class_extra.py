@@ -143,16 +143,18 @@ class SliderClass:
 
         # _coolfun collects the data from the sliders and checkboxes and sends them to the movieclass
         self._coolfun = labwrap(self.keyword, function, self.getvalue)
+        # _coolfun = curmov.valuechanged(keyword,self.getvalue)
         self._coolfun()  # call it to initialize all the line_edits.
         # had to do it twice, else the calls dont check out
-        if radiotuple is not None:
-            self._params_circle = copy.copy(self._params_image)
 
         for slider in self.sliderlist:
             slider.valueChanged.connect(self._coolfun)
         for checkbox in self.checklist:
             # remember checkboxes take the .stateChanged signal not pressed/clicked or whatever
             checkbox.stateChanged.connect(self._coolfun)
+
+        if radiotuple is not None:
+            self._params_circle = copy.copy(self._params_image)
 
         tracker = 0
         for line_edit in line_edits:
@@ -171,6 +173,9 @@ class SliderClass:
         else:
             raise Exception(f"you managed to call 'goto_radio' with {strz}??")
 
+        self.settr(thelist)
+
+    def settr(self, thelist):
         combolist = self.checklist + self.sliderlist
         # print(f" this is the combolist {combolist}")
         self.getvalue()  # a little bit hacky trick to get the keyvalue to update properly.
@@ -226,5 +231,7 @@ class SliderClass:
             else:
                 raise QtDesignError("None of the radiobuttons are pressed! \n at least one of the two should be pressed"
                                     "at all times.")
+        else:
+            self._params_image = vallist
 
         return vallist

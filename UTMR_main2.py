@@ -1,5 +1,6 @@
 import os
 import sys
+import pickle
 
 import pyqtgraph as pg
 from PyQt5 import QtWidgets
@@ -22,7 +23,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.timer = QTimer()
         self.timer.timeout.connect(self.next_frame)
         self.threadpool = QThreadPool()
-        self.CurMov = mvc2.MovieUpdate()
+        self.CurMov = mvc2.MovieUpdate()  # name of the class
         self.imlist = []
         self.histogramx = list(range(0, 255))  # the x-range of the histogram
         self.bargraph = pg.BarGraphItem()  # the histogram widget inside plotwidget (which is called self.histogram)
@@ -37,52 +38,6 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
 
         #                       image = 0       circle = 1
         self.morph_state = [[False, "image"], [False, "dilate kernel: 7 shape: 0"]]
-        self.radioButton_image.toggled.connect(self.morph_switch)
-        # .radioButton_circle.toggled.connect(self.morph_switch)
-
-
-        # load pictures in
-        # self.mr_image.setPixmap(QPixmap("./QT_Gui/images/baseimage.png"))
-        self.label_logo_uni.setPixmap((QPixmap("./QT_Gui/images/UTlogo.png")))
-        self.lineEdit_save.isEnabled()
-
-        # self.stackedWidget.setCurrentIndex(0)  # initialize to homepage
-        self.stackedWidget.setCurrentIndex(1)  # initialize to video-edit-page
-
-        # home page
-        self.button_2dicom.clicked.connect(lambda: self.stackedWidget.setCurrentIndex(2))
-        self.button_2editor.clicked.connect(lambda: self.stackedWidget.setCurrentIndex(1))
-
-        # $ $ $ $ video editor
-        # video player
-        self.pb_load_movie.clicked.connect(self.filebrowse_png)
-        self.progress_bar.setMinimum(2)
-        self.progress_bar.valueChanged.connect(self.progress_bar_fun)
-        self.pb_reset.clicked.connect(self.reset_button)
-        self.pb_play.clicked.connect(self.play_button)
-        self.pb_pause.clicked.connect(lambda: self.timer.stop())
-
-        # dicom page
-        self.pb_convert.clicked.connect(self.convert)
-        self.pb_browse_dcm.clicked.connect(self.filebrowse_dcm)
-        self.pb_reset_terminal.clicked.connect(self.txtbox_cmd.clear)
-
-        # menu buttons
-        self.actionMain.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(0))
-        self.actionImage_processing.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(1))
-        self.actionDicom_Edit.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(2))
-        self.actionCircle_Tracking.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(3))
-
-        # morphology:
-        self.dilation.clicked.connect(lambda: self.morphstring_add("dilate"))
-        self.erosion.clicked.connect(lambda: self.morphstring_add("erosion"))
-        self.m_grad.clicked.connect(lambda: self.morphstring_add("m_grad"))
-        self.blackhat.clicked.connect(lambda: self.morphstring_add("blackhat"))
-        self.white_hat.clicked.connect(lambda: self.morphstring_add("whitehat"))
-
-        self.checkBox_morph.stateChanged.connect(self.startmorph)
-        self.mr_image.mousePressEvent = self.get_pixel
-        self.checkBox_segment.stateChanged.connect(self.update_all_things)
 
         # slider list for the GLS
         sl_gls = [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
@@ -130,13 +85,140 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
 
         sl_tm = [self.slider_template]
         le_tm = [self.lineEdit_template]
-        self.SC_template = SliderClass(slides=sl_tm,line_edits=le_tm, function=self.pre_value_changed,
-                                       keyword='template',radiotuple=None,checklist=[self.checkBox_template])
+        self.SC_template = SliderClass(slides=sl_tm, line_edits=le_tm, function=self.pre_value_changed,
+                                       keyword='template', radiotuple=None, checklist=[self.checkBox_template])
+
+        # this makes sure there are keys for the circle finding as well
+
+        self.radioButton_circle.setChecked(True)
+        for clazz in SliderClass.all_sliders:
+            clazz.getvalue()
+            print(f"{clazz.keyword} has the following params {clazz._params_image}")
+            clazz._coolfun()
+        self.radioButton_image.setChecked(True)
+
+        # putting this ahead of the button switching causes problems due to morph switch actually
+        # updating some values calling an indirect 'update_all'
+        self.radioButton_image.toggled.connect(self.morph_switch)
+        # .radioButton_circle.toggled.connect(self.morph_switch)
+
+        # load pictures in
+        # self.mr_image.setPixmap(QPixmap("./QT_Gui/images/baseimage.png"))
+        self.label_logo_uni.setPixmap((QPixmap("./QT_Gui/images/UTlogo.png")))
+        self.lineEdit_save.isEnabled()
+
+        # self.stackedWidget.setCurrentIndex(0)  # initialize to homepage
+        self.stackedWidget.setCurrentIndex(1)  # initialize to video-edit-page
+
+        # home page
+        self.button_2dicom.clicked.connect(lambda: self.stackedWidget.setCurrentIndex(2))
+        self.button_2editor.clicked.connect(lambda: self.stackedWidget.setCurrentIndex(1))
+
+        # $ $ $ $ video editor
+        # video player
+        self.pb_load_movie.clicked.connect(self.filebrowse_png)
+        self.progress_bar.setMinimum(2)
+        self.progress_bar.valueChanged.connect(self.progress_bar_fun)
+        self.pb_reset.clicked.connect(self.reset_button)
+        self.pb_play.clicked.connect(self.play_button)
+        self.pb_pause.clicked.connect(lambda: self.timer.stop())
+        self.pb_save_params.clicked.connect(self.para_saver)
+        self.pb_load_params.clicked.connect(self.para_loader)
+
+        # dicom page
+        self.pb_convert.clicked.connect(self.convert)
+        self.pb_browse_dcm.clicked.connect(self.filebrowse_dcm)
+        self.pb_reset_terminal.clicked.connect(self.txtbox_cmd.clear)
+
+        # menu buttons
+        self.actionMain.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(0))
+        self.actionImage_processing.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(1))
+        self.actionDicom_Edit.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(2))
+        self.actionCircle_Tracking.triggered.connect(lambda: self.stackedWidget.setCurrentIndex(3))
+
+        # morphology:
+        self.dilation.clicked.connect(lambda: self.morphstring_add("dilate"))
+        self.erosion.clicked.connect(lambda: self.morphstring_add("erosion"))
+        self.m_grad.clicked.connect(lambda: self.morphstring_add("m_grad"))
+        self.blackhat.clicked.connect(lambda: self.morphstring_add("blackhat"))
+        self.white_hat.clicked.connect(lambda: self.morphstring_add("whitehat"))
+
+        self.checkBox_morph.stateChanged.connect(self.startmorph)
+        self.mr_image.mousePressEvent = self.get_pixel
+        self.mr_image_2.mousePressEvent = self.get_pixel
+        self.checkBox_segment.stateChanged.connect(self.update_all_things)
 
         # running functions at start:
+
         self.filebrowse_png(True)  # load in all images and go through update cycle
+        self.para_loader("./data/parameters/params_tm.txt")
 
     # $$$$$$$$  functions relating to video editor
+    def para_saver(self):
+        para_list = []
+        path = self.lineEdit_params.text()
+        print(path)
+        radio_is_circle = self.radioButton_circle.isChecked()
+
+        if radio_is_circle:
+            self.radioButton_image.setChecked(True)
+
+        file = open(path,'wb')
+        for clazz in SliderClass.all_sliders:
+            para1 = clazz._params_image
+            para_list.append(para1)
+            if clazz.radio_image is not None:
+                para2 = clazz._params_circle
+                para_list.append(para2)
+        para_list.append(self.morph_state)
+        para_list.append(self.coords)
+        para_list.append(self.checkBox_segment.isChecked())
+        para_list.append(radio_is_circle)
+        # self.morph_state = [[False, "image"], [False, "dilate kernel: 7 shape: 0"]]
+
+        pickle.dump(para_list,file)
+        file.close()
+
+        if radio_is_circle:
+            self.radioButton_circle.setChecked(True)
+
+
+
+    def para_loader(self,path=True):
+        if path is True:
+            path = self.lineEdit_params.text()
+        print(path)
+
+        file = open(path, 'rb')
+        mylist2 = pickle.load(file)
+        file.close()
+        counter = 0
+
+        radio_is_image = self.radioButton_circle.isChecked()
+
+        if radio_is_image:
+            self.radioButton_image.setChecked(True)
+
+        for clazz in SliderClass.all_sliders:
+            clazz.settr(mylist2[counter])
+            counter += 1
+            if clazz.radio_image is not None:
+                clazz._params_circle = mylist2[counter]
+                counter += 1
+        self.morph_state = mylist2[counter]
+        self.checkBox_morph.setChecked(self.morph_state[0][0])
+        self.textEdit_morph.setText(self.morph_state[0][1])
+
+        self.coords = mylist2[counter+1]
+        self.checkBox_segment.setChecked(mylist2[counter+2])
+        self.lineEdit_coords.setText(str(self.coords))
+        radio_is_circle = mylist2[counter+3]
+
+        if radio_is_circle:
+            self.radioButton_circle.setChecked(True)
+            self.radioButton_circle.click()
+
+
     def filebrowse_png(self, test=False):
         a = QtWidgets.QFileDialog()
         a.setDirectory("./data/png/")
@@ -174,6 +256,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
 
     def pre_value_changed(self, key, fun):
         self.CurMov.value_changed(key, fun)
+        # in the initialisation step do not update all
         if self.CurMov.currentframe is None:
             return
         self.update_all_things()
@@ -198,12 +281,10 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         morph_vars = [self.morph_state, self.valid_ops, self.checkBox_morph]
         segment_state = [self.checkBox_segment, self.coords]
         circ_state = []
-        output = self.CurMov.update(check_input, morph_vars,segment_state,circ_state)
+        output = self.CurMov.update(check_input, morph_vars, segment_state, circ_state)
 
         # to implement:!
         # Depending on the RADIOBUTTON: show different images..
-
-
 
         if self.radioButton_image.isChecked():
             self.histogram.clear()
@@ -241,7 +322,6 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.textEdit_morph.setTextColor(QColor(0, 0, 0, 255))
         stringz += f" kernel: {self.spinBox.value()} shape: {self.comboBox.currentIndex()}"
         self.textEdit_morph.append(stringz)
-
 
     def startmorph(self):
         """"
@@ -292,14 +372,13 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         else:
             self.morph_state[0][1] = self.textEdit_morph.toPlainText()
 
-
         self.update_all_things()
 
     def morph_switch(self):
         # use self.morph_state to transfer
         # state checkboxes being checked
         # and text in textbox
-        if self.radioButton_image.isChecked() == True:
+        if self.radioButton_image.isChecked() is True:
             # recording values
             self.morph_state[1][0] = self.checkBox_morph.isChecked()
             self.morph_state[1][1] = self.textEdit_morph.toPlainText()
@@ -307,7 +386,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             self.checkBox_morph.setChecked(self.morph_state[0][0])
             self.textEdit_morph.setText(self.morph_state[0][1])
 
-        if self.radioButton_circle.isChecked() == True:
+        if self.radioButton_circle.isChecked() is True:
             # recording values
             self.morph_state[0][0] = self.checkBox_morph.isChecked()
             self.morph_state[0][1] = self.textEdit_morph.toPlainText()

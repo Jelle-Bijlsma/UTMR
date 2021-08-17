@@ -7,11 +7,8 @@ from PyQt5.QtCore import QTimer, QThreadPool
 from PyQt5.QtGui import QPixmap, QColor
 
 import classes.class_extra
-import classes.class_frameclass
-import classes.class_movieclass
 import classes.movieclass_2 as mvc2
 import functions.auxiliary
-import functions.circle_tracking.circle_finder
 from QT_Gui import gui_full
 from classes.class_extra import SliderClass as SliderClass
 

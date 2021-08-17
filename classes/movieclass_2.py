@@ -3,9 +3,9 @@ import copy
 import cv2
 import numpy as np
 
-import functions.image_processing.base_fun as ipgun
+import functions.base_fun as ipgun
 # specific call since it is used often (and maybe a bit legacy)
-from functions.image_processing.base_fun import change_qpix as cqpx
+from functions.base_fun import change_qpix as cqpx
 
 
 def check_equal(fun, first_result: tuple, keyword, **kwargs):

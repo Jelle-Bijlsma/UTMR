@@ -4,15 +4,15 @@ import cv2
 import numpy as np
 from PyQt5 import QtWidgets, QtGui
 
-import QT_Gui.gui_morph
-from functions.image_processing.image_process import change_qpix as cqpx
+import scrapyard.gui_morph
+from scrapyard.image_process import change_qpix as cqpx
 
 
-class MorphWindowClass(QtWidgets.QMainWindow, QT_Gui.gui_morph.Ui_MainWindow):
+class MorphWindowClass(QtWidgets.QMainWindow, scrapyard.gui_morph.Ui_MainWindow):
     def __init__(self, parent=None):
         super(MorphWindowClass, self).__init__(parent)
         self.setupUi(MainWindow)
-        self.frame = cv2.imread("./data/screenshots/newting.png", 0)
+        self.frame = cv2.imread("../data/screenshots/newting.png", 0)
         self.result = np.copy(self.frame)
         self.image.setPixmap(cqpx(self.frame))
         self.textEdit.placeholderText()

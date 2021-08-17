@@ -59,7 +59,8 @@ def change_qpix(frame: np.array([])):
         w, h, c = frame.shape
         # print(frame.shape)
         if c == 3:
-            qim = QtGui.QImage(frame.data.tobytes(), h, w, h * 4, QtGui.QImage.Format_RGB32)
+            qim = QtGui.QImage(frame.data.tobytes(), h, w, frame.strides[0], QtGui.QImage.Format_RGB888)
+            print("we in rgb")
         elif c == 1:
             qim = QtGui.QImage(frame.data.tobytes(), h, w, h, QtGui.QImage.Format_Indexed8)
         else:
@@ -365,8 +366,12 @@ def circlefind(parameters: list, image: np.ndarray):
 def templatematch(img,parameters,template_list):
     _dobool = parameters[0]
     treshold = parameters[1]/100
-    plt_im = np.copy(img)
-
+    #plt_im = np.copy(img)
+    w,h = img.shape
+    plt_im = np.zeros((w,h,3),dtype='uint8')
+    plt_im[:,:,0] = img
+    plt_im[:, :, 1] = img
+    plt_im[:, :, 2] = img
     if _dobool is False:
         return img
 

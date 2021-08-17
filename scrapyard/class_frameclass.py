@@ -3,11 +3,9 @@ import numpy as np
 from PyQt5 import QtGui
 from scipy import interpolate
 
-
-import functions.auxiliary
-import functions.image_processing.image_process
-from functions.image_processing.image_process import calc_fft as cfft
-from functions.image_processing.image_process import change_qpix as cqpx
+import scrapyard.image_process
+from scrapyard.image_process import calc_fft as cfft
+from scrapyard.image_process import change_qpix as cqpx
 
 
 class FrameClass:
@@ -123,7 +121,7 @@ class FrameClass:
         if self.isvalid['histogram'] is False:
             # since histogram has no inherent parameters we do a check against a manual one to avoid
             # over-calculation.
-            self.histogram = functions.image_processing.image_process.calc_hist(self.frames['gls'])
+            self.histogram = scrapyard.image_process.calc_hist(self.frames['gls'])
             self.isvalid['histogram'] = True
 
         self.isvalid['edge_base'] = False  # can the edge-finder rely on memory?
@@ -135,9 +133,9 @@ class FrameClass:
         # this is a FFT, which is shifted. dtype = float
         self.isvalid['histogram'] = False
         self.qpix['main'] = cqpx(after_b_filter)
-        self.qpix['fft'] = cqpx(functions.image_processing.image_process.prep_fft(self.fft_frames['b_filter_a']))
+        self.qpix['fft'] = cqpx(scrapyard.image_process.prep_fft(self.fft_frames['b_filter_a']))
         # add to the collection
-        self.frames['b_filter_a'] = functions.image_processing.image_process.float_uint8(
+        self.frames['b_filter_a'] = scrapyard.image_process.float_uint8(
             after_b_filter)
 
     def calc_gfilter(self, g_filter):
@@ -150,8 +148,8 @@ class FrameClass:
         # this is a FFT, which is shifted. dtype = float
         self.isvalid['histogram'] = False
         self.qpix['main'] = cqpx(after_g_filter)
-        self.qpix['fft'] = cqpx(functions.image_processing.image_process.prep_fft(self.fft_frames['g_filter_a']))
-        self.frames['g_filter_a'] = functions.image_processing.image_process.float_uint8(
+        self.qpix['fft'] = cqpx(scrapyard.image_process.prep_fft(self.fft_frames['g_filter_a']))
+        self.frames['g_filter_a'] = scrapyard.image_process.float_uint8(
             after_g_filter)
 
     def calc_gfilter2(self, g_filter):
@@ -162,7 +160,7 @@ class FrameClass:
         self.fft_frames['g_filter_a2'] = np.multiply(self.fft_frames['gls2'], np.fft.fftshift(g_filter))
         after_g_filter = np.fft.ifft2(self.fft_frames['g_filter_a2'])
         # this is a FFT, which is shifted. dtype = float
-        self.frames['g_filter_a2'] = functions.image_processing.image_process.float_uint8(
+        self.frames['g_filter_a2'] = scrapyard.image_process.float_uint8(
             after_g_filter)
         return cqpx(self.frames['g_filter_a2'])
 
@@ -184,7 +182,7 @@ class FrameClass:
 
         if self.isvalid['edge_base'] is False:
             Qimage = QtGui.QPixmap.toImage(self.qpix['main'])
-            self.frames['pre_edge'] = functions.image_processing.image_process.qt_image_to_array(
+            self.frames['pre_edge'] = scrapyard.image_process.qt_image_to_array(
                 Qimage, share_memory=True)[:, :, 0]  # WHY is there data corruption if share memory is FALSE?!
             # take only the first 2d array because it returns a color channel while we work in grayscale.
             self.isvalid['edge_base'] = True
@@ -247,7 +245,7 @@ class FrameClass:
         # so no error but a bit ... ill conceived naming
         print(f"sobel shape is{np.shape(grad_x)}")
 
-        self.frames['sobel2'] = functions.image_processing.image_process.float_uint8(grad)
+        self.frames['sobel2'] = scrapyard.image_process.float_uint8(grad)
         return cqpx(self.frames['sobel2'])
 
     def calc_sobel(self, parameters: list) -> (QtGui.QPixmap, QtGui.QPixmap):
@@ -278,7 +276,7 @@ class FrameClass:
         # so no error but a bit ... ill conceived naming
         print(f"sobel shape is{np.shape(grad_x)}")
         print(grad.dtype)
-        self.frames['sobel'] = functions.image_processing.image_process.float_uint8(grad)
+        self.frames['sobel'] = scrapyard.image_process.float_uint8(grad)
         print(self.frames['sobel'].dtype)
         return cqpx(grad), self.qpix['main']
 

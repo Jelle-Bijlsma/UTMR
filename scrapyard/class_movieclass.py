@@ -1,9 +1,6 @@
-from typing import List
-import numpy as np
-
-import classes.class_frameclass
-import functions.image_processing.image_process
-from functions.image_processing.image_process import change_qpix as cqpx
+import scrapyard.class_frameclass
+import scrapyard.image_process
+from scrapyard.image_process import change_qpix as cqpx
 
 
 class MovieClass:
@@ -30,7 +27,7 @@ class MovieClass:
             # For the life of me I can not figure out how to share a class between different processes. Queues,
             # managers, proxies. Not working. Problem is pickling. Besides it being SO slow, it does not support
             # QPix stuff. I need to find a way to use some form of shared memory.
-            self.framelist.append(classes.class_frameclass.FrameClass(element))
+            self.framelist.append(scrapyard.class_frameclass.FrameClass(element))
         self.maxframes = len(imlist) - 1
         self.parameters['shape'] = self.framelist[self.maxframes].parameters['shape']
         # (370, 370) for current call
@@ -54,17 +51,17 @@ class MovieClass:
 
     def getnewbfilter(self):
         # the filter is 'good looking' meaning it is centered aesthetically.
-        self.filters['b_filter'] = functions.image_processing.image_process.butter_filter(
+        self.filters['b_filter'] = scrapyard.image_process.butter_filter(
             self.parameters['shape'], self.parameters['b_filter'][1], self.parameters['b_filter'][2])
         self.qpix['b_filter'] = cqpx(self.filters['b_filter'])
 
     def getnewgfilter(self):
-        self.filters['g_filter'] = functions.image_processing.image_process.gaus_filter(
+        self.filters['g_filter'] = scrapyard.image_process.gaus_filter(
             self.parameters['shape'], self.parameters['g_filter'][1], self.parameters['g_filter'][2],
             self.parameters['g_filter'][3])
         self.qpix['g_filter'] = cqpx(self.filters['g_filter'])
         if 'g_filter2' in self.parameters:
-            self.filters['g_filter2'] = functions.image_processing.image_process.gaus_filter(
+            self.filters['g_filter2'] = scrapyard.image_process.gaus_filter(
                 self.parameters['shape'], self.parameters['g_filter2'][1], self.parameters['g_filter2'][2],
                 self.parameters['g_filter2'][3])
 

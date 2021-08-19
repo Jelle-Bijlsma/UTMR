@@ -291,70 +291,9 @@ def circlefind(parameters: list, image: np.ndarray):
     imagez = cv2.resize(imagepre,(y*scalefactor,x*scalefactor))
     circles = cv2.HoughCircles(imagez, cv2.HOUGH_GRADIENT, dp=dp, minDist=minDist, param1=param1, param2=param2,
                                minRadius=minradius, maxRadius=maxradius)
-
+    circles = np.round(circles[0, :]).astype("int")
+    # loop over the (x, y) coordinates and radius of the circles
     if circles is not None:
-        # since the hough detects the circles randomly, we have the need to sort them in ascending order
-        # for the spline to work
-        if len(circles[0]) < 3:
-            #print(f"not enough circles {circles}")
-            #print(len(circles[0]))
-            return image
-        conlist = circles[0, :, 0:2]
-        #print(f"conlist: {conlist}")
-        mysort = sorted(conlist, key=lambda p: p[0])
-        mysort = np.array(mysort)
-        x = mysort[:, 0]
-        y = mysort[:, 1]
-        # create spline
-        spl = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
-
-        # if you need to pop due to too many circles youre doing sth wrong
-        # try:
-        #     spl = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
-        # except ValueError:
-        #     count = 0
-        #     newsort = []
-        #     for x,y in mysort:
-        #         if count == 0:
-        #             count += 1
-        #             continue
-        #         if mysort[count-1][0] != mysort[count][0]:
-        #             newsort.append(mysort[count-1])
-        #             if count == len(mysort):
-        #                 newsort.append(mysort[count])
-        #     x = newsort[:, 0]
-        #     y = newsort[:, 1]
-        #     spl = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
-
-        spl.set_smoothing_factor(0.5)
-        # by creating a dense line grid to plot the spline over, we get smooth output
-        xnew2 = np.linspace(np.min(x) - 20, np.max(x) + 20, num=60, endpoint=True)
-        ynew2 = spl(xnew2)
-
-        # this construction turns the separate xnew2 and ynew2 into an array of like this:
-        # [[x0, y0]
-        # [x1, y1]] etc..
-        thelist = np.array([[x, y] for x, y in zip(xnew2, ynew2)], dtype="int")
-
-        # we now want to round the list, to make them into accessible pixel values for plotting.
-        # by drawing straight lines between each pixel value, we can recreate the spline in an image.
-        firsthit = False
-        lineting = []  # keeps pycharm happy
-        for element in thelist:
-            if firsthit is True:
-                # drawing the line takes int's in tuple form.
-                lineting = (lineting[0], lineting[1])
-                elementa = (element[0], element[1])
-                cv2.line(img=imagez, pt1=lineting, pt2=elementa, color=255, thickness=5)
-                lineting = element
-            else:
-                lineting = element
-                firsthit = True
-
-        # we draw the circles where we found them.
-        # convert the (x, y) coordinates and radius of the circles to integers
-        circles = np.round(circles[0, :]).astype("int")
-        # loop over the (x, y) coordinates and radius of the circles
         for (x, y, r) in circles:
             print("drawing")
             # draw the circle in the output image, then draw a rectangle
@@ -373,12 +312,264 @@ def templatematch(img,parameters,template_list):
     plt_im[:, :, 1] = img
     plt_im[:, :, 2] = img
     if _dobool is False:
-        return img
+        return img, [0,0]
+
+    template_pos = []
+    template_x = []
+    template_y = []
+    lista = []
 
     for template in template_list:
         w,h = template.shape
         res = cv2.matchTemplate(img,template,cv2.TM_CCOEFF_NORMED)
         loc = np.where(res >= treshold)
+        template_x.append(loc[0])
+        template_y.append(loc[1])
+        template_pos.append(loc)
         for pt in zip(*loc[::-1]):
             cv2.rectangle(plt_im,pt,(pt[0] + w,pt[1]+h),(200,0,0),2)
-    return plt_im
+            lista.append(pt)
+    return plt_im, lista
+
+def sort_out(mylist):
+    if mylist == [0,0]:
+        return []
+    mylist = list(dict.fromkeys(mylist)) # remove duplicates
+    counter = 0
+    range = 8
+    batches = []
+    real_coords = []
+    my_smaller_list = mylist
+
+    while True:
+        fp = 0
+        if len(my_smaller_list) == 0:
+            batch = "done"
+        else:
+            ct = my_smaller_list[0]
+            newlist = []
+            for element in my_smaller_list:
+                if fp == 0:
+                    fp = 1
+                    continue
+                nt = element
+                diff = abs(ct[0] - nt[0]) + abs(ct[1] - nt[1])
+                if diff < range:
+                    newlist.append(nt)
+            newlist.append(ct)
+            batch = newlist
+        # batch = get_a_batch(my_smaller_list, 7, counter)
+        if len(batch) == 0:
+            counter += 1
+            continue
+        elif batch == "done":
+            break
+        batches.append(batch)
+        batch_set = set(batch)
+        msl_set = set(my_smaller_list)
+        msl_set = msl_set.difference(batch_set)
+        my_smaller_list = list(msl_set)
+
+    for element in batches:
+        # print(f"this is a batch{element}")
+        asd = np.array(element)
+        x, _ = asd.shape
+        X = int((np.sum(asd[:, 0]) / x))
+        Y = int((np.sum(asd[:, 1]) / x))
+
+        real_coords.append((X, Y))
+
+    return real_coords
+
+def drawsq(img,coords, cirq = False):
+    x_offset = 6
+    y_offset = 7
+
+    if coords == []:
+        return img
+    if cirq is False:
+        for x,y in coords:
+            # one day, i need to fill in the actual template size..
+            cv2.rectangle(img,(x,y),(x+15,y+15),(255),2)
+    else:
+        for x,y in coords:
+            cv2.circle(img,(x+x_offset,y+y_offset),4,[255,0,0])
+    return img
+
+def get_spline(keypoints,image,template=False):
+    import warnings
+    """
+    template keywords adds offset to the keypoints due to template matching (in contrast with circlefinding) gives
+    an offcentre coordinate point.
+    """
+
+    x_offset = 6
+    y_offset = 7
+
+    # since the hough detects the circles randomly, we have the need to sort them in ascending order
+    # for the spline to work
+    if len(keypoints) < 3:
+        # print(f"not enough circles {circles}")
+        # print(len(circles[0]))
+        return []
+
+    if template is True:
+        keypoints = [(x + x_offset, y + y_offset) for (x, y) in keypoints]
+
+    # coordinate transform
+    w,h = image.shape
+    blank = np.zeros((w,h))
+
+    for x,y in keypoints:
+        blank[y,x] = 255
+
+    blank_rotate = cv2.rotate(blank,cv2.ROTATE_90_COUNTERCLOCKWISE)
+    y,x = np.nonzero(blank_rotate)
+    conlist = []
+
+    for x,y in zip(x,y):
+        # -8 to take into account template match size!
+        conlist.append((x,y))
+
+
+    # print(f"conlist: {conlist}")
+    mysort = sorted(conlist, key=lambda p: p[0])
+    mysort = np.array(mysort)
+    x = mysort[:, 0]
+    y = mysort[:, 1]
+    # create spline
+    try:
+        spl = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
+    except ValueError:
+        warnings.warn("Warning: function (get_spline) exited prematurely:\n"
+                      "this normally happens during initialization. If you get this message in any other situation "
+                      "too many coordinates have been passed to the 'get_spline' function."
+                      )
+        return []
+
+
+    spl.set_smoothing_factor(0.5)
+    # by creating a dense line grid to plot the spline over, we get smooth output
+    xnew2 = np.linspace(np.min(x), np.max(x), num=20, endpoint=True)
+    ynew2 = spl(xnew2)
+
+    # this construction turns the separate xnew2 and ynew2 into an array of like this:
+    # [[x0, y0]
+    # [x1, y1]] etc..
+    thelist = np.array([[x, y] for x, y in zip(xnew2, ynew2)], dtype="int")
+    # print(f"this is the list{thelist}")
+    return thelist
+
+def draw_spline(image, thelist, mask):
+    if thelist == []:
+        return image, []
+
+    channel = np.copy(image)
+    w,h = image.shape
+    cimage = np.zeros((w,h,3))
+
+    cimage[:,:,0] = channel
+    cimage[:,:,1] = channel
+    cimage[:,:,2] = channel
+
+    image = cv2.rotate(image,cv2.ROTATE_90_COUNTERCLOCKWISE)
+    cimage = cv2.rotate(cimage, cv2.ROTATE_90_COUNTERCLOCKWISE)
+
+    # we now want to round the list, to make them into accessible pixel values for plotting.
+    # by drawing straight lines between each pixel value, we can recreate the spline in an image.
+    firstpoint = True
+    point_1 = []  # keeps pycharm happy
+    dist = []
+    for coord_iteration in thelist:
+        if firstpoint is True:
+            point_1 = coord_iteration
+            firstpoint = False
+        elif firstpoint is False:
+            colorz,distz,spoints = color_determine(point_1,mask)
+            dist.append(distz)
+            point_2 = (coord_iteration[0], coord_iteration[1])
+            cv2.line(img=cimage, pt1=point_1, pt2=point_2, color=colorz, thickness=1)
+            cv2.line(img=cimage, pt1=point_2, pt2=spoints, color=[255,0,0], thickness=1)
+
+            point_1 = point_2
+    return cv2.rotate(cimage,cv2.ROTATE_90_CLOCKWISE), dist
+
+
+
+def color_determine(point,mask):
+    spoints, radius = dist_determine(point, mask)
+    if radius < 10:
+        color = [255,0,0]
+    elif (radius >= 10) & (radius <=20):
+        color = [255,255,0]
+    else:
+        color = [0,255,0]
+    return color,radius, spoints
+
+def dist_determine(point,mask):
+    xcent, ycent = point
+    checkvar = 0
+
+    #mask = np.transpose(mask)
+    for radius in range(1, 150, 1):
+        rstep = int((radius)/2)
+
+        # horizontal
+        y = 0
+        yp = y + ycent
+        x = int(((radius ** 2 - (yp - ycent) ** 2)) ** 0.5)
+        iy = int(y)
+
+        if mask[(x + xcent, iy + ycent)] == checkvar:
+            return (x + xcent, iy + ycent),radius
+        if mask[(-x + xcent, iy + ycent)] == checkvar:
+            return (-x + xcent, iy + ycent),radius
+
+        # the vertical lines
+        y = radius
+        yp = y + ycent
+        x = int(((radius ** 2 - (yp - ycent) ** 2)) ** 0.5)
+        iy = int(y)
+        if mask[(x + xcent, iy + ycent)] == checkvar:
+            return (x + xcent, iy + ycent),radius
+        if mask[(-x + xcent, -iy + ycent)] == checkvar:
+            return (x + xcent, -iy + ycent),radius
+
+        # upper diagonal
+        y = rstep
+        yp = y + ycent
+        x = int(((radius ** 2 - (yp - ycent) ** 2)) ** 0.5)
+        iy = int(y)
+
+        if mask[(x + xcent, iy + ycent)] == checkvar:
+            return (x + xcent, iy + ycent),radius
+
+        if mask[(-x + xcent, iy + ycent)] == checkvar:
+            return (-x + xcent, iy + ycent),radius
+
+        if mask[(x + xcent, -iy + ycent)] == checkvar:
+            return (x + xcent, -iy + ycent),radius
+
+        if mask[(-x + xcent, -iy + ycent)] == checkvar:
+            return (-x + xcent, -iy + ycent),radius
+
+
+        # the lower diagonals
+        y = int(radius-rstep*0.25)
+        yp = y + ycent
+        x = int(((radius ** 2 - (yp - ycent) ** 2)) ** 0.5)
+        iy = int(y)
+
+        if mask[(x + xcent, iy + ycent)] == checkvar:
+            return (x + xcent, iy + ycent),radius
+
+        if mask[(-x + xcent, iy + ycent)] == checkvar:
+            return (-x + xcent, iy + ycent),radius
+
+        if mask[(x + xcent, -iy + ycent)] == checkvar:
+            return (x + xcent, -iy + ycent),radius
+
+        if mask[(-x + xcent, -iy + ycent)] == checkvar:
+            return (-x + xcent, -iy + ycent),radius
+
+    return [],[]

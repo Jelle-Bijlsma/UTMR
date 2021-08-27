@@ -1,6 +1,7 @@
-import os
-import sys
 import pickle
+import sys
+import os
+import warnings
 
 import pyqtgraph as pg
 from PyQt5 import QtWidgets
@@ -22,6 +23,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         # start initializing variables
         self.timer = QTimer()
         self.timer.timeout.connect(self.next_frame)
+        self.timer_value = self.spinbox_fps.value()
         self.threadpool = QThreadPool()
         self.CurMov = mvc2.MovieUpdate()  # name of the class
         self.imlist = []
@@ -83,13 +85,19 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             slides=sl_cf, line_edits=le_cf, function=self.pre_value_changed, keyword='circlefinder',
             radiotuple=None, checklist=[self.checkBox_circle])
 
-        sl_tm = [self.slider_template]
-        le_tm = [self.lineEdit_template]
+        sl_tm = [self.slider_template, self.slider_tm_safe, self.slider_tm_medium, self.slider_tm_danger]
+        le_tm = [self.lineEdit_template, self.lineEdit_tm_safe, self.lineEdit_tm_medium, self.lineEdit_tm_danger]
         self.SC_template = SliderClass(slides=sl_tm, line_edits=le_tm, function=self.pre_value_changed,
                                        keyword='template', radiotuple=None, checklist=[self.checkBox_template])
 
-        # this makes sure there are keys for the circle finding as well
+        sl_lf = [self.slider_lf_ar, self.slider_lf_dr, self.slider_lf_thr, self.slider_lf_minl, self.slider_lf_maxl,
+                 self.slider_bb_minr, self.slider_bb_maxr]
+        le_lf = [self.lineEdit_lf_ar, self.lineEdit_lf_dr, self.lineEdit_lf_thr, self.lineEdit_lf_minl,
+                 self.lineEdit_lf_maxl, self.lineEdit_bb_minr, self.lineEdit_bb_maxr]
+        self.SC_lf = SliderClass(slides=sl_lf, line_edits=le_lf, function=self.pre_value_changed,
+                                 keyword='linefinder', radiotuple=None, checklist=[self.checkBox_lf])
 
+        # this makes sure there are keys for the circle finding as well
         self.radioButton_circle.setChecked(True)
         for clazz in SliderClass.all_sliders:
             clazz.getvalue()
@@ -121,6 +129,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.progress_bar.valueChanged.connect(self.progress_bar_fun)
         self.pb_reset.clicked.connect(self.reset_button)
         self.pb_play.clicked.connect(self.play_button)
+        self.spinBox_FPS.valueChanged.connect(self.play_button)
         self.pb_pause.clicked.connect(lambda: self.timer.stop())
         self.pb_save_params.clicked.connect(self.para_saver)
         self.pb_load_params.clicked.connect(self.para_loader)
@@ -148,8 +157,9 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.mr_image_2.mousePressEvent = self.get_pixel
         self.checkBox_segment.stateChanged.connect(self.update_all_things)
 
-        # running functions at start:
+        # timers
 
+        # running functions at start:
         self.filebrowse_png(True)  # load in all images and go through update cycle
         self.para_loader("./data/parameters/params_tm.txt")
 
@@ -163,7 +173,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         if radio_is_circle:
             self.radioButton_image.setChecked(True)
 
-        file = open(path,'wb')
+        file = open(path, 'wb')
         for clazz in SliderClass.all_sliders:
             para1 = clazz._params_image
             para_list.append(para1)
@@ -176,21 +186,19 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         para_list.append(radio_is_circle)
         # self.morph_state = [[False, "image"], [False, "dilate kernel: 7 shape: 0"]]
 
-        pickle.dump(para_list,file)
+        pickle.dump(para_list, file)
         file.close()
 
         if radio_is_circle:
             self.radioButton_circle.setChecked(True)
 
-
-
-    def para_loader(self,path=True):
+    def para_loader(self, path=True):
         if path is True:
             path = self.lineEdit_params.text()
         print(path)
 
         file = open(path, 'rb')
-        mylist2 = pickle.load(file)
+        loaded_p_list = pickle.load(file)
         file.close()
         counter = 0
 
@@ -200,24 +208,40 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             self.radioButton_image.setChecked(True)
 
         for clazz in SliderClass.all_sliders:
-            clazz.settr(mylist2[counter])
-            counter += 1
-            if clazz.radio_image is not None:
-                clazz._params_circle = mylist2[counter]
+
+            # ## if you added a new sliderclass and want to load your old parameters, you can use this little hack
+            # classname = 'linefinder'
+            # #print(loaded_p_list[counter])
+            # #print(f"the latest keyword = {clazz.keyword}")
+            # if clazz.keyword == [classname]:
+            #     warnings.warn("parameters are messed up! save new ones")
+            #     break
+
+            try:
+                clazz.settr(loaded_p_list[counter])
                 counter += 1
-        self.morph_state = mylist2[counter]
+                if clazz.radio_image is not None:
+                    clazz._params_circle = loaded_p_list[counter]
+                    counter += 1
+            except IndexError:
+                # again a small hack for when you add an extra element to the class and this is not yet implemented
+                # in your parameter saves.
+                warnings.warn("parameters are messed up! save new ones")
+                counter += 1
+        print(f"should be morph: {loaded_p_list[counter]}")
+        # in the save, manually set the morph_state as the final thing to load in
+        self.morph_state = loaded_p_list[counter]
         self.checkBox_morph.setChecked(self.morph_state[0][0])
         self.textEdit_morph.setText(self.morph_state[0][1])
 
-        self.coords = mylist2[counter+1]
-        self.checkBox_segment.setChecked(mylist2[counter+2])
+        self.coords = loaded_p_list[counter + 1]
+        self.checkBox_segment.setChecked(loaded_p_list[counter + 2])
         self.lineEdit_coords.setText(str(self.coords))
-        radio_is_circle = mylist2[counter+3]
+        radio_is_circle = loaded_p_list[counter + 3]
 
         if radio_is_circle:
             self.radioButton_circle.setChecked(True)
             self.radioButton_circle.click()
-
 
     def filebrowse_png(self, test=False):
         a = QtWidgets.QFileDialog()
@@ -299,13 +323,21 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             self.histogram.clear()
             self.histogram.addItem(pg.BarGraphItem(x=self.histogramx, height=output[1][1], width=5, brush='g'))
             self.filter_image1.setPixmap(output[1][2])
-            self.label_qim_tester.setPixmap(output[1][3])
+            self.label_qim_tester.setPixmap(output[1][10])
             self.fourier_image.setPixmap(output[1][4])
             self.filter_image_g.setPixmap(output[1][5])
+            self.label_mask_im.setPixmap(output[0][9])
             if self.checkBox_template.isChecked():
                 self.mr_image.setPixmap(output[1][9])
             else:
                 self.mr_image.setPixmap(output[1][8])
+
+        if output[1][11] != []:
+            self.lineEdit_tip_a.setText(str(round(output[1][11][0])))
+            self.lineEdit_wall_a.setText(str(round(output[1][11][1])))
+        if output[1][12] != []:
+            self.lineEdit_tip_wall.setText(str(output[1][12][0]))
+            self.lineEdit_closest.setText(str(min(output[1][12])))
 
         self.mr_image_2.setPixmap(output[0][0])
         # now you want to do update2, on the improved and cutout frame..
@@ -408,10 +440,19 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.lineEdit_coords.setText(coords)
 
     def play_button(self):
+        print("here")
+        current_timer = int((1 / self.spinBox_FPS.value())*1000)
+        print(f"spinbox = {self.spinBox_FPS.value()}")
+        print(f"self_timer_value={self.timer_value}")
+        print(f"current_timer = {current_timer}")
+        if self.timer_value != current_timer:
+            print("there")
+            self.timer.stop()
+            self.timer.start(current_timer)
+            self.timer_value = current_timer
         if self.timer.isActive():
             return
-        self.timer.start(50)
-
+        self.timer.start(current_timer)
     # pause_button is through a lambda function.
 
     def reset_button(self):

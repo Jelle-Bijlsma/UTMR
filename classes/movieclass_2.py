@@ -193,9 +193,13 @@ class MovieUpdate:
         real_coords = ipgun.sort_out(tlist)
         # print(real_coords)
         pre_spline_im = ipgun.drawsq(base_image, real_coords,cirq=True)
-        spline_coords = ipgun.get_spline(real_coords,pre_spline_im,template=True)
-        spline_im, _ = ipgun.draw_spline(pre_spline_im,spline_coords,mask)
-
+        spline_coords = ipgun.get_spline(real_coords,pre_spline_im,para['template'])
+        spline_im, distances = ipgun.draw_spline(pre_spline_im,spline_coords,mask,para['template'])
+        template = ipgun.draw_bb(para['linefinder'],template,spline_coords)
+        cutout, angles = ipgun.takelines(para['linefinder'], spline_coords, mask)
+        #print(filtered_image2.shape)
+        #print(filtered_image2.dtype)
+        # print(base_image.shape)
         """"
         Still need to fix: coordinates are the lower left vertex of the matched template. To draw square I add 15
         Which is the approximate square of the template. Get it right soon. 
@@ -203,8 +207,10 @@ class MovieUpdate:
 
         #               0               1           2                   3                       4
         output[1] = [cqpx(gls_image), histogram, cqpx(b_filter), cqpx(filtered_image2), cqpx(ipgun.prep_fft(fourier)),
-        #               5                 6                  7                 8                9
-                    cqpx(g_filter), cqpx(edge_found), cqpx(morph_img), cqpx(circle_im), cqpx(template)]
+        #               5                 6                  7                 8                9           10
+                    cqpx(g_filter), cqpx(edge_found), cqpx(morph_img), cqpx(circle_im), cqpx(template), cqpx(cutout),
+        #                11
+                     angles, distances]
 
         # output[0][0] = cqpx(sq_im)
         output[0][0] = cqpx(spline_im)

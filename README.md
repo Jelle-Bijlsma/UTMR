@@ -16,6 +16,17 @@ UTMR_main.py is the main event handler. It imports:
 * numpy (native)
 * functions.auxillary & functions.classes
 
+OPENCV:
+opencv-python-headless
+instead of opencv-python
+If you still get this error:
+
+_qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found. This application failed to_
+_start because no Qt platform plugin could be initialized. Reinstalling the application may fix this problem._
+
+run in terminal: `sudo apt-get install --reinstall libxcb-xinerama0`
+> https://askubuntu.com/questions/308128/failed-to-load-platform-plugin-xcb-while-launching-qt5-app-on-linux-without
+
 and `QT_Gui` which is the file 'built' in QTdesigner. It serves
 as the template for the GUI.
 

@@ -1,3 +1,5 @@
+import warnings
+
 import numpy as np
 from PyQt5 import QtGui, QtWidgets
 import cv2
@@ -150,10 +152,9 @@ def prep_fft(fft_frame):
     return fft_gl
 
 
-def edge_call(boxes,image,para_canny,para_sobel):
+def edge_call(boxes, image, para_canny, para_sobel):
     sobelbox = boxes[0]
     cannybox = boxes[1]
-
 
     true_canny = para_canny[0]
     true_sobel = para_sobel[0]
@@ -162,8 +163,7 @@ def edge_call(boxes,image,para_canny,para_sobel):
         # sobelbox.setChecked(False)
         # cannybox.setChecked(True)
         # print("there can be only one! (edge finder)")
-        return do_canny(para_canny[1:],do_sobel(image,para_sobel[1:])), True
-
+        return do_canny(para_canny[1:], do_sobel(image, para_sobel[1:])), True
 
     if true_canny:
         return cv2.Canny(image, para_canny[1], para_canny[2]), True
@@ -171,10 +171,10 @@ def edge_call(boxes,image,para_canny,para_sobel):
         return do_sobel(image, para_sobel[1:]), True
     else:
         return image, False
-        #raise Exception("how did you even get here? @edge_call")
+        # raise Exception("how did you even get here? @edge_call")
 
 
-def do_sobel(frame,parameters):
+def do_sobel(frame, parameters):
     """"
     Left this in as a separate function for possibility of doing
 
@@ -199,7 +199,7 @@ def do_sobel(frame,parameters):
     return grad
 
 
-def do_canny(parameters,frame):
+def do_canny(parameters, frame):
     threshold1 = parameters[0]
     threshold2 = parameters[1]
     edges = cv2.Canny(frame, threshold1, threshold2)
@@ -208,13 +208,14 @@ def do_canny(parameters,frame):
     # https://docs.opencv.org/3.4/dd/d1a/group__imgproc__feature.html#ga04723e007ed888ddf11d9ba04e2232de
     return edges
 
+
 def do_morph(img, morph_vars, no_edgefinding):
     morph_com = morph_vars[0][1]
     morph_txt = morph_vars[0][1]
     valid_ops: list = morph_vars[1]
     checkbox: QtWidgets.QCheckBox = morph_vars[2]
 
-    #print(f"we got morph_vars[0] it is: {morph_vars[0]}, and its type is {type(morph_vars[0])}")
+    # print(f"we got morph_vars[0] it is: {morph_vars[0]}, and its type is {type(morph_vars[0])}")
 
     if morph_vars[0][0] is True:
         if (no_edgefinding == np.bool_(False)):
@@ -249,7 +250,7 @@ def do_morph(img, morph_vars, no_edgefinding):
         return img
 
 
-def flood(img,original,params):
+def flood(img, original, params):
     checkbox: QtWidgets.QCheckBox = params[0]
     coords = params[1]
 
@@ -257,9 +258,9 @@ def flood(img,original,params):
         if coords is None:
             print("Please click the to-be flooded area first")
             checkbox.setChecked(False)
-            return np.zeros((10,10),dtype='uint8'), img
+            return np.zeros((10, 10), dtype='uint8'), img
 
-        x,y = coords
+        x, y = coords
         after_fill = np.copy(img)
         before_fill = np.copy(img)
         h, w = img.shape
@@ -269,9 +270,10 @@ def flood(img,original,params):
         mask = after_fill ^ before_fill
         masked = mask & original
 
-        return mask,masked
+        return mask, masked
     else:
-        return np.zeros((10, 10),dtype='uint8'), img
+        return np.zeros((10, 10), dtype='uint8'), img
+
 
 def circlefind(parameters: list, image: np.ndarray):
     circ_bool = parameters[0]
@@ -286,9 +288,9 @@ def circlefind(parameters: list, image: np.ndarray):
         return image
 
     imagepre = cv2.rotate(np.copy(image), cv2.ROTATE_90_CLOCKWISE)
-    x,y = imagepre.shape
+    x, y = imagepre.shape
     scalefactor = 4
-    imagez = cv2.resize(imagepre,(y*scalefactor,x*scalefactor))
+    imagez = cv2.resize(imagepre, (y * scalefactor, x * scalefactor))
     circles = cv2.HoughCircles(imagez, cv2.HOUGH_GRADIENT, dp=dp, minDist=minDist, param1=param1, param2=param2,
                                minRadius=minradius, maxRadius=maxradius)
     circles = np.round(circles[0, :]).astype("int")
@@ -298,21 +300,22 @@ def circlefind(parameters: list, image: np.ndarray):
             print("drawing")
             # draw the circle in the output image, then draw a rectangle
             # corresponding to the center of the circle
-            cv2.circle(imagez, (x, y), r, 125,4)
+            cv2.circle(imagez, (x, y), r, 125, 4)
 
-    return cv2.rotate(imagez,cv2.ROTATE_90_COUNTERCLOCKWISE)
+    return cv2.rotate(imagez, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
-def templatematch(img,parameters,template_list):
+
+def templatematch(img, parameters, template_list):
     _dobool = parameters[0]
-    treshold = parameters[1]/100
-    #plt_im = np.copy(img)
-    w,h = img.shape
-    plt_im = np.zeros((w,h,3),dtype='uint8')
-    plt_im[:,:,0] = img
+    treshold = parameters[1] / 100
+    # plt_im = np.copy(img)
+    w, h = img.shape
+    plt_im = np.zeros((w, h, 3), dtype='uint8')
+    plt_im[:, :, 0] = img
     plt_im[:, :, 1] = img
     plt_im[:, :, 2] = img
     if _dobool is False:
-        return img, [0,0]
+        return img, [0, 0]
 
     template_pos = []
     template_x = []
@@ -320,21 +323,22 @@ def templatematch(img,parameters,template_list):
     lista = []
 
     for template in template_list:
-        w,h = template.shape
-        res = cv2.matchTemplate(img,template,cv2.TM_CCOEFF_NORMED)
+        w, h = template.shape
+        res = cv2.matchTemplate(img, template, cv2.TM_CCOEFF_NORMED)
         loc = np.where(res >= treshold)
         template_x.append(loc[0])
         template_y.append(loc[1])
         template_pos.append(loc)
         for pt in zip(*loc[::-1]):
-            cv2.rectangle(plt_im,pt,(pt[0] + w,pt[1]+h),(200,0,0),2)
+            cv2.rectangle(plt_im, pt, (pt[0] + w, pt[1] + h), (200, 0, 0), 2)
             lista.append(pt)
     return plt_im, lista
 
+
 def sort_out(mylist):
-    if mylist == [0,0]:
+    if mylist == [0, 0]:
         return []
-    mylist = list(dict.fromkeys(mylist)) # remove duplicates
+    mylist = list(dict.fromkeys(mylist))  # remove duplicates
     counter = 0
     range = 8
     batches = []
@@ -381,27 +385,34 @@ def sort_out(mylist):
 
     return real_coords
 
-def drawsq(img,coords, cirq = False):
+
+def drawsq(img, coords, cirq=False):
     x_offset = 6
     y_offset = 7
 
     if coords == []:
         return img
     if cirq is False:
-        for x,y in coords:
+        for x, y in coords:
             # one day, i need to fill in the actual template size..
-            cv2.rectangle(img,(x,y),(x+15,y+15),(255),2)
+            cv2.rectangle(img, (x, y), (x + 15, y + 15), (255), 2)
     else:
-        for x,y in coords:
-            cv2.circle(img,(x+x_offset,y+y_offset),4,[255,0,0])
+        for x, y in coords:
+            cv2.circle(img, (x + x_offset, y + y_offset), 4, [255, 0, 0])
     return img
 
-def get_spline(keypoints,image,template=False):
-    import warnings
+
+def get_spline(keypoints, image, parameters=None):
+
+    if parameters is None:
+        parameters = [False]
+
     """
     template keywords adds offset to the keypoints due to template matching (in contrast with circlefinding) gives
     an offcentre coordinate point.
     """
+
+    template = parameters[0]
 
     x_offset = 6
     y_offset = 7
@@ -417,20 +428,19 @@ def get_spline(keypoints,image,template=False):
         keypoints = [(x + x_offset, y + y_offset) for (x, y) in keypoints]
 
     # coordinate transform
-    w,h = image.shape
-    blank = np.zeros((w,h))
+    w, h = image.shape
+    blank = np.zeros((w, h))
 
-    for x,y in keypoints:
-        blank[y,x] = 255
+    for x, y in keypoints:
+        blank[y, x] = 255
 
-    blank_rotate = cv2.rotate(blank,cv2.ROTATE_90_COUNTERCLOCKWISE)
-    y,x = np.nonzero(blank_rotate)
+    blank_rotate = cv2.rotate(blank, cv2.ROTATE_90_COUNTERCLOCKWISE)
+    y, x = np.nonzero(blank_rotate)
     conlist = []
 
-    for x,y in zip(x,y):
+    for x, y in zip(x, y):
         # -8 to take into account template match size!
-        conlist.append((x,y))
-
+        conlist.append((x, y))
 
     # print(f"conlist: {conlist}")
     mysort = sorted(conlist, key=lambda p: p[0])
@@ -447,7 +457,6 @@ def get_spline(keypoints,image,template=False):
                       )
         return []
 
-
     spl.set_smoothing_factor(0.5)
     # by creating a dense line grid to plot the spline over, we get smooth output
     xnew2 = np.linspace(np.min(x), np.max(x), num=20, endpoint=True)
@@ -460,19 +469,21 @@ def get_spline(keypoints,image,template=False):
     # print(f"this is the list{thelist}")
     return thelist
 
-def draw_spline(image, thelist, mask):
+
+def draw_spline(image, thelist, mask, parameter):
     if thelist == []:
         return image, []
 
     channel = np.copy(image)
-    w,h = image.shape
-    cimage = np.zeros((w,h,3))
+    w, h = image.shape
+    cimage = np.zeros((w, h, 3))
 
-    cimage[:,:,0] = channel
-    cimage[:,:,1] = channel
-    cimage[:,:,2] = channel
+    cimage[:, :, 0] = channel
+    cimage[:, :, 1] = channel
+    cimage[:, :, 2] = channel
 
-    image = cv2.rotate(image,cv2.ROTATE_90_COUNTERCLOCKWISE)
+    #   image = cv2.rotate(image,cv2.ROTATE_90_COUNTERCLOCKWISE)
+    mask = cv2.rotate(mask, cv2.ROTATE_90_COUNTERCLOCKWISE)
     cimage = cv2.rotate(cimage, cv2.ROTATE_90_COUNTERCLOCKWISE)
 
     # we now want to round the list, to make them into accessible pixel values for plotting.
@@ -480,39 +491,81 @@ def draw_spline(image, thelist, mask):
     firstpoint = True
     point_1 = []  # keeps pycharm happy
     dist = []
+
+    manager = iter(thelist)
+    _ = next(manager)
+    _ = next(manager)
+
     for coord_iteration in thelist:
         if firstpoint is True:
             point_1 = coord_iteration
             firstpoint = False
         elif firstpoint is False:
-            colorz,distz,spoints = color_determine(point_1,mask)
-            dist.append(distz)
+            # rotate counterclockwise so the top point of the tip is point1
+            doneyet = next(manager,True)
             point_2 = (coord_iteration[0], coord_iteration[1])
+            # doneyet is implemented to make sure the tip and end have their distance measured at the right place
+            # uncomment both cv2.line's to see
+            if doneyet is True:
+                colorz, distz, spoints = color_determine(point_2, mask, parameter)
+                #cv2.line(img=cimage, pt1=point_2, pt2=spoints, color=[255,0,0], thickness=1)
+
+            else:
+                colorz, distz, spoints = color_determine(point_1, mask, parameter)
+                #cv2.line(img=cimage, pt1=point_1, pt2=spoints, color=[255,0,0], thickness=1)
+
+            dist.append(distz)
             cv2.line(img=cimage, pt1=point_1, pt2=point_2, color=colorz, thickness=1)
-            cv2.line(img=cimage, pt1=point_2, pt2=spoints, color=[255,0,0], thickness=1)
-
             point_1 = point_2
-    return cv2.rotate(cimage,cv2.ROTATE_90_CLOCKWISE), dist
+
+    #print(dist)
+    return cv2.rotate(cimage, cv2.ROTATE_90_CLOCKWISE), dist
 
 
-
-def color_determine(point,mask):
+def color_determine(point, mask, parameter):
     spoints, radius = dist_determine(point, mask)
-    if radius < 10:
-        color = [255,0,0]
-    elif (radius >= 10) & (radius <=20):
-        color = [255,255,0]
-    else:
-        color = [0,255,0]
-    return color,radius, spoints
 
-def dist_determine(point,mask):
+    # print(parameter)
+
+    safe = parameter[2]
+    medium = parameter[3]
+    danger = parameter[4]
+
+    if not danger < medium < safe:
+        warnings.warn("danger < medium < safe is not the case, fallback to defaults")
+        safe = 18
+        medium = 12
+        danger = 4
+
+    # safe space
+    if radius >= safe:
+        color = [0, 255, 0]
+    # medium space
+    elif (radius < safe) & (radius > danger):
+        if (radius >= medium):
+            # dy = 0-1
+            rc = -1 / (safe - medium)
+            b = 1 - rc * medium
+            scale = int(round((radius * rc + b) * 255))
+            color = [scale, 255, 0]
+
+        else:
+            # dy = 1-0
+            rc = 1 / (medium - danger)
+            b = 0 - rc * danger
+            scale = int(round((radius * rc + b) * 255))
+            color = [255, scale, 0]
+    else:
+        color = [255, 0, 0]
+    return color, radius, spoints
+
+
+def dist_determine(point, mask):
     xcent, ycent = point
     checkvar = 0
-
-    #mask = np.transpose(mask)
-    for radius in range(1, 150, 1):
-        rstep = int((radius)/2)
+    mask = np.transpose(mask)
+    for radius in range(1, 100):
+        rstep = int((radius) / 2)
 
         # horizontal
         y = 0
@@ -521,9 +574,9 @@ def dist_determine(point,mask):
         iy = int(y)
 
         if mask[(x + xcent, iy + ycent)] == checkvar:
-            return (x + xcent, iy + ycent),radius
+            return (x + xcent, iy + ycent), radius
         if mask[(-x + xcent, iy + ycent)] == checkvar:
-            return (-x + xcent, iy + ycent),radius
+            return (-x + xcent, iy + ycent), radius
 
         # the vertical lines
         y = radius
@@ -531,9 +584,9 @@ def dist_determine(point,mask):
         x = int(((radius ** 2 - (yp - ycent) ** 2)) ** 0.5)
         iy = int(y)
         if mask[(x + xcent, iy + ycent)] == checkvar:
-            return (x + xcent, iy + ycent),radius
+            return (x + xcent, iy + ycent), radius
         if mask[(-x + xcent, -iy + ycent)] == checkvar:
-            return (x + xcent, -iy + ycent),radius
+            return (x + xcent, -iy + ycent), radius
 
         # upper diagonal
         y = rstep
@@ -542,34 +595,104 @@ def dist_determine(point,mask):
         iy = int(y)
 
         if mask[(x + xcent, iy + ycent)] == checkvar:
-            return (x + xcent, iy + ycent),radius
+            return (x + xcent, iy + ycent), radius
 
         if mask[(-x + xcent, iy + ycent)] == checkvar:
-            return (-x + xcent, iy + ycent),radius
+            return (-x + xcent, iy + ycent), radius
 
         if mask[(x + xcent, -iy + ycent)] == checkvar:
-            return (x + xcent, -iy + ycent),radius
+            return (x + xcent, -iy + ycent), radius
 
         if mask[(-x + xcent, -iy + ycent)] == checkvar:
-            return (-x + xcent, -iy + ycent),radius
-
+            return (-x + xcent, -iy + ycent), radius
 
         # the lower diagonals
-        y = int(radius-rstep*0.25)
+        y = int(radius - rstep * 0.25)
         yp = y + ycent
         x = int(((radius ** 2 - (yp - ycent) ** 2)) ** 0.5)
         iy = int(y)
 
         if mask[(x + xcent, iy + ycent)] == checkvar:
-            return (x + xcent, iy + ycent),radius
+            return (x + xcent, iy + ycent), radius
 
         if mask[(-x + xcent, iy + ycent)] == checkvar:
-            return (-x + xcent, iy + ycent),radius
+            return (-x + xcent, iy + ycent), radius
 
         if mask[(x + xcent, -iy + ycent)] == checkvar:
-            return (x + xcent, -iy + ycent),radius
+            return (x + xcent, -iy + ycent), radius
 
         if mask[(-x + xcent, -iy + ycent)] == checkvar:
-            return (-x + xcent, -iy + ycent),radius
+            return (-x + xcent, -iy + ycent), radius
 
-    return [],[]
+    return [], []
+
+def draw_bb(params,img,cp):
+    #print(cp)
+    if cp == []:
+        return img
+    dx,dy = params[-2:]
+    #fp = [cp[0][1],-cp[0][0]]
+    fp = [cp[0][1], cp[0][0]]
+    #print(f"fp={fp}")
+    trans = (fp[1],-fp[0])
+    return cv2.rectangle(img,(fp[0]-dx-7,fp[1]+dy),(fp[0]+dx-7,fp[1]-dy),[112,51,173])
+
+def takelines(params,cp,mask):
+
+    # https://stackoverflow.com/questions/45322630/how-to-detect-lines-in-opencv
+
+    if cp == []:
+        return mask, []
+    dx,dy = params[-2:]
+    fp = [cp[0][0], cp[0][1]]
+
+    kernel = cv2.getStructuringElement(shape=0, ksize=(2, 2))
+    mask = cv2.morphologyEx(mask, cv2.MORPH_GRADIENT, kernel)
+
+    xstart = fp[0]-dy-7
+    xend = fp[0]+dy-7
+    ystart = fp[1]+dx
+    yend = fp[1]-dx
+
+    mask_crop = mask[xstart:xend,yend:ystart]
+
+    rho = params[1]
+    theta = params[2]/1000
+    threshold = params[3]
+    min_line_length = params[4]
+    max_line_gap = params[5]
+
+    lines = cv2.HoughLinesP(mask_crop, rho, theta, threshold, np.array([]),
+                            min_line_length, max_line_gap)
+
+    #print(mask_crop.shape)
+
+    anglist = []
+
+    """"
+    Angle calculation is correct in this scenario but not robust to change. 
+    Due to lines running in different directions and absolute measurements.
+    Would need to do some coordinate transforms on the points
+    """
+
+
+    if lines is not None:
+        for line in lines:
+            for x1, y1, x2, y2 in line:
+                #print(f"point 1 {x1}, {y1}, point2 {x2}, {y2}")
+                #cv2.line(mask_crop, (x1, y1), (x2, y2), (0, 0, 255), 3)
+                cv2.line(mask_crop, (x1, y1), (x2, y2), (122), 3)
+                # mask_crop = cv2.circle(mask_crop, (30,0), 10, (250))
+                anglist.append(abs((np.arctan((y1-y2)/(x1-x2+0.0001))/np.pi)*180))
+                # print(f"atan = {np.arctan((y1-y2)/(x1-x2+0.0001))}")
+
+    # print(anglist)
+    # print(f"wall angle{np.mean(anglist)}")
+    x1,y1 = cp[0]
+    # print(cp[0])
+    x2,y2 = cp[4]
+    # print(cp[4])
+    tip_angle = (((np.arctan(((y1-y2))/((x1-x2))))/np.pi)*180)
+    wall_angle = np.mean(anglist)
+
+    return mask_crop, [tip_angle,wall_angle]

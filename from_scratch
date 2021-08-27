@@ -174,26 +174,8 @@ def realtalk():
     drawfun = np.copy(mask)
     radiuslist = []
 
-    # square making function
-
-
     for centre in myarray:
         Y,X = centre
-        # found_wall = False
-        # drawfun = cv2.circle(drawfun, (y, x), 3, 0)
-        # size = 1
-        # print(x,y)
-        # while found_wall is False:
-        #     sq_coords = drawsquare(size,(x,y))
-        #     size += 1
-        #     for X,Y in sq_coords:
-        #         #print(mask[X,Y])
-        #         if mask[X,Y] == 0.0:
-        #             #print("hi")
-        #             found_wall = True
-        #             cv2.line(drawfun,(y,x),(Y,X),150,1)
-        #             cv2.circle(drawfun,(0,0),4,)
-
         (y,x),radius = dist_determine(centre, mask)
         radiuslist.append(radius)
         cv2.line(drawfun,(y,x),(Y,X),150,1)
@@ -202,15 +184,14 @@ def realtalk():
     plt.imshow(drawfun)
     plt.show()
 
-realtalk()
+#realtalk()
+mask = np.loadtxt('/home/jelle/PycharmProjects/UTMR/mask.txt')
+# plt.imshow(mask)
+# plt.show()
 
-# centre = (200, 200)
-# a = np.zeros((400, 400))
-# ab = []
-#
-# for _ in range(100):
-#     ab.append(crazyfun(centre, a))
-#
-# print(np.mean(ab))
-#0.028s
-#0.0007
+kernel = cv2.getStructuringElement(shape=0,ksize=(2,2))
+mask2 = cv2.morphologyEx(mask,cv2.MORPH_GRADIENT,kernel)
+mask2 = mask2[0:100,0:100]
+plt.imshow(mask2)
+plt.show()
+

@@ -1,8 +1,10 @@
 import pickle
 import sys
 import os
+import time
 import warnings
 
+import numpy as np
 import pyqtgraph as pg
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QTimer, QThreadPool
@@ -14,6 +16,60 @@ import functions.auxiliary
 from QT_Gui import gui_full
 from classes.class_extra import SliderClass as SliderClass
 
+
+def set_to_ms(self: QtWidgets.QLineEdit,seconds,cutoff = 8, mode = 'normal',ns=False):
+    if self.za is None:
+        self.za = np.zeros(self.fps)
+    if ns is False:
+        ms = seconds * 100
+    else:
+        # this is really awkward but okay..
+        ms = seconds
+
+    if mode == 'normal':
+        ms_string = self.strstr(ms,cutoff)
+
+    #elif mode == 'avg':
+    else:
+        if self.tc == self.fps or self.tc == 0:
+            self.tc = 0
+            self.t_max = self.strstr(np.max(self.za),cutoff)
+            self.t_min = self.strstr(np.min(self.za),cutoff)
+        self.za[self.tc] = ms
+        self.mean = np.mean(self.za)
+        ms_string = self.strstr(self.mean,cutoff)
+        self.tc += 1
+
+    self.setText(ms_string)
+
+def strip_str(self, num,cutoff):
+    return str(num)[0:cutoff]
+
+def start(self: QtWidgets.QLineEdit, ns = False):
+    if ns is False:
+        self.start_t = time.perf_counter()
+    else:
+        self.start_t = time.perf_counter_ns()
+
+def stop(self: QtWidgets.QLineEdit,cutoff = 8, mode = 'normal',ns = False):
+    if ns is False:
+        elapsed = time.perf_counter() - self.start_t
+    else:
+        elapsed = time.perf_counter_ns() - self.start_t
+
+    self.setTime(elapsed, cutoff, mode, ns=ns)
+
+
+
+QtWidgets.QLineEdit.setTime = set_to_ms
+QtWidgets.QLineEdit.start = start
+QtWidgets.QLineEdit.stop = stop
+QtWidgets.QLineEdit.strstr = strip_str
+
+QtWidgets.QLineEdit.tc = 0  # times called (tc)
+QtWidgets.QLineEdit.start_t = 0
+QtWidgets.QLineEdit.za = None
+QtWidgets.QLineEdit.fps = 15
 
 # the whole thing is just existing within this class.
 class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
@@ -35,6 +91,13 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.radio_image = True
         self.circleparam = False
         self.coords = None
+        self.past_10 = np.zeros(10)
+        self.update_call = 0
+        self.req_time = 0
+        self.FPS = self.spinBox_FPS.value()
+
+        self.frametime = time.perf_counter()
+
         self.valid_ops = ["dilate", "erosion", "m_grad", "blackhat", "whitehat"]
         radiotuple = (self.radioButton_image, self.radioButton_circle)
 
@@ -272,11 +335,15 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
     def next_frame(self):
         # called when the timer says it is time for the next frame
         # i.e. increments '.frame_number'
+        current_time = time.perf_counter()
+        self.lineEdit_frameT.setTime(current_time-self.frametime)
+        self.frametime = current_time
+
         self.CurMov.get_frame()  # MovieClass method to go to the next frame index
         if self.progress_bar.value() != self.CurMov.frame_number:
             self.progress_bar.setValue(self.CurMov.frame_number)  # edit the progress bar
-        # print("next_frame")
-        self.update_all_things()
+
+        # don't call update_all here. it is already done by the moving progress bar.
 
     def pre_value_changed(self, key, fun):
         self.CurMov.value_changed(key, fun)
@@ -297,6 +364,8 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
 
     def update_all_things(self):
         # called whenever the main screen should be updated
+        self.lineEdit_uaT.start()
+
         check_input = [self.checkBox_sobel, self.checkBox_Canny]
         if self.morph_state[0][1] == "image":
             # only done on initializer run
@@ -305,10 +374,18 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         morph_vars = [self.morph_state, self.valid_ops, self.checkBox_morph]
         segment_state = [self.checkBox_segment, self.coords]
         circ_state = []
-        output = self.CurMov.update(check_input, morph_vars, segment_state, circ_state)
+        self.lineEdit_sumT.start()
 
+        timer_list = [self.lineEdit_glsT,self.lineEdit_preT,self.lineEdit_edgeT,self.lineEdit_morphT,
+                      self.lineEdit_segT,self.lineEdit_lfT, self.lineEdit_cqpx, self.lineEdit_tmT,
+                      self.lineEdit_sortT]
+
+        output = self.CurMov.update(check_input, morph_vars, segment_state, circ_state,timer_list)
+        self.lineEdit_sumT.stop()
         # to implement:!
         # Depending on the RADIOBUTTON: show different images..
+
+        self.lineEdit_dispT.start()
 
         if self.radioButton_image.isChecked():
             self.histogram.clear()
@@ -338,9 +415,17 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         if output[1][12] != []:
             self.lineEdit_tip_wall.setText(str(output[1][12][0]))
             self.lineEdit_closest.setText(str(min(output[1][12])))
-
         self.mr_image_2.setPixmap(output[0][0])
+        self.lineEdit_dispT.stop(mode='avg')
+
         # now you want to do update2, on the improved and cutout frame..
+
+        self.lineEdit_uaT.stop(mode='avg')
+        self.lineEdit_uaT_min.setText(self.lineEdit_uaT.t_min)
+        self.lineEdit_uaT_max.setText(self.lineEdit_uaT.t_max)
+
+        self.lineEdit_difT.setText(str(self.req_time*100-self.lineEdit_uaT.mean)[0:8])
+
 
     def morphstring_add(self, stringz):
         """"
@@ -440,19 +525,22 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.lineEdit_coords.setText(coords)
 
     def play_button(self):
-        print("here")
-        current_timer = int((1 / self.spinBox_FPS.value())*1000)
-        print(f"spinbox = {self.spinBox_FPS.value()}")
-        print(f"self_timer_value={self.timer_value}")
-        print(f"current_timer = {current_timer}")
+        self.FPS = self.spinBox_FPS.value()
+        self.req_time = 1/self.FPS
+        current_timer = int((self.req_time) * 1000)
+        self.lineEdit_tfpsT.setTime(self.req_time)
         if self.timer_value != current_timer:
-            print("there")
             self.timer.stop()
             self.timer.start(current_timer)
             self.timer_value = current_timer
         if self.timer.isActive():
             return
         self.timer.start(current_timer)
+
+        # set update rate on mean/avg in line_edits for timers.
+        QtWidgets.QLineEdit.za = np.zeros(self.FPS)  # zero array (za)
+        QtWidgets.QLineEdit.fps = self.FPS
+
     # pause_button is through a lambda function.
 
     def reset_button(self):

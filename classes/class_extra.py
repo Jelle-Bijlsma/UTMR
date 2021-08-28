@@ -37,7 +37,6 @@ class Worker1(QtCore.QRunnable):
         # print("we here")
         for element in filelist:
             self.a = self.a + 1
-            print("also here?")
             # disregard non-dicom files
             # if element[0:3] != 'IM_':
             #     print("incorrect filestring")

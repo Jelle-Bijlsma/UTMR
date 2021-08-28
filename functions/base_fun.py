@@ -41,7 +41,7 @@ def calc_gls(image, parameters):
     return gls, histogram
 
 
-def change_qpix(frame: np.array([])):
+def change_qpix(frame: np.ndarray):
     # some links i might need later
     # https://gist.github.com/belltailjp/a9538aaf3221f754e5bf
 

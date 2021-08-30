@@ -114,7 +114,7 @@ class MovieUpdate:
     def update(self, boxes, morph_vars, segment_state, circ_state,timer_list):
         para = self.parameters
 
-        glsT, preT, edgeT, morphT, segT, lfT, cqpxT, tmT, sortT,  = timer_list
+        glsT, preT, edgeT, morphT, segT, lfT, cqpxT, tmT, sortT, drawT, spl1T, spl2T = timer_list
 
         # we do this to enter the second row of keys into the dictionary.
         # they dont appear by themselves so they are forced in.
@@ -231,13 +231,23 @@ class MovieUpdate:
         sortT.stop(mode='avg',cutoff=5)
 
         # print(real_coords)
+        drawT.start()
         pre_spline_im = ipgun.drawsq(base_image, real_coords,cirq=True)
+        drawT.stop(mode='avg', cutoff=5)
+
+        spl1T.start()
         spline_coords = ipgun.get_spline(real_coords,pre_spline_im,para['template'])
+        spl1T.stop(mode='avg', cutoff=5)
+
+        spl2T.start()
         spline_im, distances = ipgun.draw_spline(pre_spline_im,spline_coords,mask,para['template'])
+        spl2T.stop(mode='avg', cutoff=5)
 
 
         template = ipgun.draw_bb(para['linefinder'],template,spline_coords)
+        lfT.start()
         cutout, angles = ipgun.takelines(para['linefinder'], spline_coords, mask)
+        lfT.stop(mode='avg', cutoff=5)
 
         #print(filtered_image2.shape)
         #print(filtered_image2.dtype)
@@ -252,8 +262,10 @@ class MovieUpdate:
         #               5                 6                  7                 8                9           10
                     cqpx(self.g_filter), cqpx(edge_found), cqpx(morph_img), cqpx(circle_im), cqpx(template), cqpx(cutout),
         #                11
-                     angles, distances]
-        output[0][0] = cqpx(spline_im)
+                     angles, distances, cqpx(spline_im)]
+
+
+        # output[0][0] = cqpx(spline_im)
 
 
         return output

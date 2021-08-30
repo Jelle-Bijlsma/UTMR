@@ -4,10 +4,11 @@ import os
 import time
 import warnings
 
+
 import numpy as np
 import pyqtgraph as pg
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import QTimer, QThreadPool
+from PyQt5.QtCore import QTimer, QThreadPool, QFile
 from PyQt5.QtGui import QPixmap, QColor
 
 import classes.class_extra
@@ -21,7 +22,7 @@ def set_to_ms(self: QtWidgets.QLineEdit,seconds,cutoff = 8, mode = 'normal',ns=F
     if self.za is None:
         self.za = np.zeros(self.fps)
     if ns is False:
-        ms = seconds * 100
+        ms = seconds * 1000
     else:
         # this is really awkward but okay..
         ms = seconds
@@ -378,7 +379,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
 
         timer_list = [self.lineEdit_glsT,self.lineEdit_preT,self.lineEdit_edgeT,self.lineEdit_morphT,
                       self.lineEdit_segT,self.lineEdit_lfT, self.lineEdit_cqpx, self.lineEdit_tmT,
-                      self.lineEdit_sortT]
+                      self.lineEdit_sortT, self.lineEdit_drawT, self.lineEdit_spl1T, self.lineEdit_spl2T]
 
         output = self.CurMov.update(check_input, morph_vars, segment_state, circ_state,timer_list)
         self.lineEdit_sumT.stop()
@@ -401,13 +402,13 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             self.histogram.addItem(pg.BarGraphItem(x=self.histogramx, height=output[1][1], width=5, brush='g'))
             self.filter_image1.setPixmap(output[1][2])
             self.label_qim_tester.setPixmap(output[1][10])
-            self.fourier_image.setPixmap(output[1][4])
+            self.mr_image.setPixmap(output[1][13])
             self.filter_image_g.setPixmap(output[1][5])
             self.label_mask_im.setPixmap(output[0][9])
             if self.checkBox_template.isChecked():
-                self.mr_image.setPixmap(output[1][9])
+                self.fourier_image.setPixmap(output[1][9])
             else:
-                self.mr_image.setPixmap(output[1][8])
+                self.fourier_image.setPixmap(output[1][8])
 
         if output[1][11] != []:
             self.lineEdit_tip_a.setText(str(round(output[1][11][0])))
@@ -424,7 +425,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.lineEdit_uaT_min.setText(self.lineEdit_uaT.t_min)
         self.lineEdit_uaT_max.setText(self.lineEdit_uaT.t_max)
 
-        self.lineEdit_difT.setText(str(self.req_time*100-self.lineEdit_uaT.mean)[0:8])
+        self.lineEdit_difT.setText(str((self.req_time*1000-self.lineEdit_uaT.mean)/self.FPS)[0:8])
 
 
     def morphstring_add(self, stringz):
@@ -639,7 +640,11 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
 if __name__ == "__main__":
     # chad no argument vs virgin sys.argv
     app = QtWidgets.QApplication(sys.argv)
-
+    #sshFile = "./QT_Gui/Combinear.qss"
+    sshFile = "./QT_Gui/Dtor.qss"
+    # its not dtor. It is from https://github.com/GTRONICK/QSS/blob/master/Aqua.qss
+    with open(sshFile,'r') as fh:
+        app.setStyleSheet(fh.read())
     MainWindow = QtWidgets.QMainWindow()
     ui = BuildUp()
     MainWindow.show()

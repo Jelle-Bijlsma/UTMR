@@ -3,6 +3,8 @@
 This is the code repository for my master thesis.
 Currently it is a little bit less of a mess, and more information will be added.
 
+## known issues
+The readme is not up to date, documentation is a bit lacking and some parts are uncommented
 
 ### setup
 UTMR_main.py is the main event handler. It imports:
@@ -49,28 +51,3 @@ such as `change_brightness`.
 called from the event handler to iterate through the `framelist`
 
 
-## known issues
-!! Using pycharm, whitin the virtual environment, the folder "./lib/python3.8/cv2/qt"
-has to be renamed. I am not quite sure why, however this works. It seems  something breaks when using QT5
-in conjuction with CV2.
-
-! qpix images are stored as RGB32, not as UINT8. This increases storage 4 fold.
-However current RAM usage is 1.1Gb. I have not found the root of the problem yet.
-
-sobel filter uses a shared memory array, if set to "copy" you get memory errors. 
-I would expect the opposite. I dont know why this works. 
-
-**focus**: there is a problem with keyboard input. keyPressEvent is not 
-properly registered. I believe this has something to do with window focus..
-
-If you dont have 4k resolution tough luck.
-
-Menu buttons are suboptimal
-
-video editor:
-* 20% of the buttons do not work
-
-## could be fixed:
-dicom editor:d
-
-* You can input an empty folder in dicom path and get no warning.

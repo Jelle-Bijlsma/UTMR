@@ -21,7 +21,7 @@ def get_spline(keypoints, image, parameters=None):
     # M = np.round(cv2.getRotationMatrix2D((cx,cy), 90, 1))  # CCW is positive!
     # got the inspiration from https://www.pyimagesearch.com/2021/01/20/opencv-rotate-image/
     # print(np.round(M))
-    w, h = image.shape
+    h,w  = image.shape
     M = np.array(([[0, 1],
                    [-1, 0]]))
     conlist = []

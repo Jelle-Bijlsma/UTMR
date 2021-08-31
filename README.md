@@ -5,6 +5,7 @@ Currently it is a little bit less of a mess, and more information will be added.
 
 ## known issues
 The readme is not up to date
+>>'improve' branch is the current branch, not 'master'
 
 
 ### setup

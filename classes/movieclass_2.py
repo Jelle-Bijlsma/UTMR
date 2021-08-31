@@ -1,11 +1,15 @@
 import copy
 
+# specific call since it is used often (and maybe a bit legacy)
 import cv2
 import numpy as np
-
-import functions.base_fun as ipgun
-# specific call since it is used often (and maybe a bit legacy)
-from functions.base_fun import change_qpix as cqpx
+from functions.process import change_qpix as cqpx
+import functions.process as process
+import functions.edge as edge
+import functions.filter as filterf
+import functions.line_find as lf
+import functions.spline as spl
+import functions.template as tpm
 
 
 def check_equal(fun, first_result: tuple, keyword, **kwargs):
@@ -59,15 +63,18 @@ class MovieUpdate:
         self.histogram = []
         self.b_filter = []
         self.g_filter = []
+        self.b_filter2 = []
+        self.g_filter2 = []
         self.fourier = []
         self.filtered_image1 = []
 
         self.prevpar = None
         self.prevpar2 = None
+        self.edge_status = None
 
-        t1 = cv2.imread("./data/templates/scale1.png",0)
-        t2 = cv2.imread("./data/templates/scale2.png",0)
-        self.template_list = [t1,t2]
+        t1 = cv2.imread("./data/templates/scale1.png", 0)
+        t2 = cv2.imread("./data/templates/scale2.png", 0)
+        self.template_list = [t1, t2]
         # t3
         #
         # t4
@@ -108,12 +115,11 @@ class MovieUpdate:
         key = "".join(key)
         # the value of the dict key is the evaluation of the given function
         self.parameters[key] = fun()
-        #print("wrote a key")
+        # print("wrote a key")
         # print(self.parameters)
 
-    def update(self, boxes, morph_vars, segment_state, circ_state,timer_list):
+    def update(self, morph_vars, segment_state, timer_list):
         para = self.parameters
-
         glsT, preT, edgeT, morphT, segT, lfT, cqpxT, tmT, sortT, drawT, spl1T, spl2T = timer_list
 
         # we do this to enter the second row of keys into the dictionary.
@@ -124,10 +130,10 @@ class MovieUpdate:
                 key2 = key + "2"
                 para[key2] = para[key]
             print("we failed SON4")
+
         base_image = np.copy(self.currentframe)
-        # print(self.parameters)
-        output = [list,list]
-        #           [self.morph_state, self.valid_ops, self.checkBox_morph]
+        output = [list, list]
+
         morph_vars1 = [morph_vars[0][0], morph_vars[1], morph_vars[2]]
         morph_vars2 = [morph_vars[0][1], morph_vars[1], morph_vars[2]]
 
@@ -149,124 +155,115 @@ class MovieUpdate:
             ipgun.calc_gls, expected_outcome, 'GLS', image=base_image, parameters=para['GLS'])
         """
 
-        # print("new update \n")
-
         glsT.start(ns=False)
-        gls_image, histogram = ipgun.calc_gls(base_image, para['GLS'])
-        glsT.stop(mode='avg',ns=False,cutoff=5)
+        gls_image, histogram = process.calc_gls(base_image, para['GLS'])
+        glsT.stop(mode='avg', ns=False, cutoff=5)
 
         preT.start()
         if self.prevpar == [para['b_filter'], para['g_filter']]:
             pass
         else:
-            self.b_filter = ipgun.b_filter(parameters=para['b_filter'], shape=np.shape(self.currentframe))
-            self.g_filter = ipgun.g_filter(parameters=para['g_filter'], shape=np.shape(self.currentframe))
+            self.b_filter = filterf.b_filter(parameters=para['b_filter'], shape=np.shape(self.currentframe))
+            self.g_filter = filterf.g_filter(parameters=para['g_filter'], shape=np.shape(self.currentframe))
             self.prevpar = [para['b_filter'], para['g_filter']]
 
         # 'fourier' is raw complex128.
         # para['b_filter'] is only needed for the checkbox
-        filtered_image1, fourier, = ipgun.apply_filter(parameters=para['b_filter'], filterz=self.b_filter,
-                                                       image=gls_image)
-        filtered_image2, fourier, = ipgun.apply_filter(parameters=para['g_filter'], filterz=self.g_filter,
-                                                       image=filtered_image1)
-        preT.stop(mode='avg',cutoff=5)
+        filtered_image1, fourier, = filterf.apply_filter(parameters=para['b_filter'], filterz=self.b_filter,
+                                                         image=gls_image)
+        filtered_image2, fourier, = filterf.apply_filter(parameters=para['g_filter'], filterz=self.g_filter,
+                                                         image=filtered_image1)
+        preT.stop(mode='avg', cutoff=5)
 
         # call 2 edge function, to determine wheter canny or sobel is used...
         edgeT.start()
-        edge_found, self.edge_status = ipgun.edge_call(boxes, filtered_image2, para['canny'], para['sobel'])
+        edge_found, self.edge_status = edge.edge_call(filtered_image2, para['canny'], para['sobel'])
         # what am i doing on the next line?!
         no_edgefinding = np.all(np.sort(edge_found) == np.sort(filtered_image2))
         # no_edgefinding = False
-        edgeT.stop(mode='avg',cutoff=5)
+        edgeT.stop(mode='avg', cutoff=5)
 
         morphT.start()
-        morph_img = ipgun.do_morph(edge_found, morph_vars1, no_edgefinding)
-        morphT.stop(mode='avg',cutoff = 5)
+        morph_img = edge.do_morph(edge_found, morph_vars1, no_edgefinding)
+        morphT.stop(mode='avg', cutoff=5)
 
         segT.start()
-        mask, masked = ipgun.flood(morph_img, base_image, segment_state)
-        segT.stop(mode='avg', cutoff = 5)
-
+        mask, masked = edge.flood(morph_img, base_image, segment_state)
+        segT.stop(mode='avg', cutoff=5)
 
         cqpxT.start()
         #              0                    1              2            3               4
         output[0] = [cqpx(base_image), cqpx(gls_image), histogram, cqpx(self.b_filter), cqpx(filtered_image2),
-        #              5                    6              7                8
-        cqpx(ipgun.prep_fft(fourier)), cqpx(self.g_filter), cqpx(edge_found), cqpx(morph_img),
-        #   9           10
-        cqpx(mask), cqpx(masked)]
-        cqpxT.stop(mode='avg',cutoff=5)
+                     #              5                    6              7                8
+                     cqpx(filterf.prep_fft(fourier)), cqpx(self.g_filter), cqpx(edge_found), cqpx(morph_img),
+                     #   9           10
+                     cqpx(mask), cqpx(masked)]
+        cqpxT.stop(mode='avg', cutoff=5)
 
         # Now we do everythang again........
-        gls_image, histogram = ipgun.calc_gls(masked, para['GLS2'])
+        gls_image, histogram = process.calc_gls(masked, para['GLS2'])
 
         if self.prevpar2 == [para['b_filter2'], para['g_filter2']]:
             pass
         else:
-            self.b_filter2 = ipgun.b_filter(parameters=para['b_filter2'], shape=np.shape(self.currentframe))
-            self.g_filter2 = ipgun.g_filter(parameters=para['g_filter2'], shape=np.shape(self.currentframe))
+            self.b_filter2 = filterf.b_filter(parameters=para['b_filter2'], shape=np.shape(self.currentframe))
+            self.g_filter2 = filterf.g_filter(parameters=para['g_filter2'], shape=np.shape(self.currentframe))
             self.prevpar2 = [para['b_filter2'], para['g_filter2']]
 
         # 'fourier' is raw complex128.
         # para['b_filter'] is only needed for the checkbox
-        filtered_image1, fourier, = ipgun.apply_filter(parameters=para['b_filter2'], filterz=self.b_filter2,
-                                                       image=gls_image)
-        filtered_image2, fourier, = ipgun.apply_filter(parameters=para['g_filter2'], filterz=self.g_filter2,
-                                                       image=filtered_image1)
+        filtered_image1, fourier, = filterf.apply_filter(parameters=para['b_filter2'], filterz=self.b_filter2,
+                                                         image=gls_image)
+        filtered_image2, fourier, = filterf.apply_filter(parameters=para['g_filter2'], filterz=self.g_filter2,
+                                                         image=filtered_image1)
 
         # call 2 edge function, to determine wheter canny or sobel is used...
-        edge_found, self.edge_status = ipgun.edge_call(boxes, filtered_image2, para['canny2'], para['sobel2'])
+        edge_found, self.edge_status = edge.edge_call(filtered_image2, para['canny2'], para['sobel2'])
         no_edgefinding = np.all(np.sort(edge_found) == np.sort(filtered_image2))
-        morph_img = ipgun.do_morph(edge_found, morph_vars2, no_edgefinding)
+        morph_img = edge.do_morph(edge_found, morph_vars2, no_edgefinding)
 
         # circle finding
-        circle_im = ipgun.circlefind(para['circlefinder'],morph_img)
+        circle_im = tpm.circlefind(para['circlefinder'], morph_img)
 
         tmT.start()
-        template, tlist = ipgun.templatematch(morph_img,para['template'],self.template_list)
-        tmT.stop(mode='avg',cutoff=5)
+        template, tlist = tpm.templatematch(morph_img, para['template'], self.template_list)
+        tmT.stop(mode='avg', cutoff=5)
 
         sortT.start()
-        real_coords = ipgun.sort_out(tlist)
-        sortT.stop(mode='avg',cutoff=5)
+        real_coords = tpm.sort_out(tlist)
+        sortT.stop(mode='avg', cutoff=5)
 
         # print(real_coords)
         drawT.start()
-        pre_spline_im = ipgun.drawsq(base_image, real_coords,cirq=True)
+        pre_spline_im = tpm.drawsq(base_image, real_coords, cirq=True)
         drawT.stop(mode='avg', cutoff=5)
 
         spl1T.start()
-        spline_coords = ipgun.get_spline(real_coords,pre_spline_im,para['template'])
+        spline_coords = spl.get_spline(real_coords, pre_spline_im, para['template'])
         spl1T.stop(mode='avg', cutoff=5)
 
         spl2T.start()
-        spline_im, distances = ipgun.draw_spline(pre_spline_im,spline_coords,mask,para['template'])
+        spline_im, distances = spl.draw_spline(pre_spline_im, spline_coords, mask, para['template'])
         spl2T.stop(mode='avg', cutoff=5)
 
-
-        template = ipgun.draw_bb(para['linefinder'],template,spline_coords)
+        template = lf.draw_bb(para['linefinder'], template, spline_coords)
         lfT.start()
-        cutout, angles = ipgun.takelines(para['linefinder'], spline_coords, mask)
+        cutout, angles = lf.takelines(para['linefinder'], spline_coords, mask)
         lfT.stop(mode='avg', cutoff=5)
 
-        #print(filtered_image2.shape)
-        #print(filtered_image2.dtype)
+        # print(filtered_image2.shape)
+        # print(filtered_image2.dtype)
         # print(base_image.shape)
         """"
         Still need to fix: coordinates are the lower left vertex of the matched template. To draw square I add 15
         Which is the approximate square of the template. Get it right soon. 
         """
 
-        #               0               1           2                   3                       4
-        output[1] = [cqpx(gls_image), histogram, cqpx(self.b_filter), cqpx(filtered_image2), cqpx(ipgun.prep_fft(fourier)),
-        #               5                 6                  7                 8                9           10
-                    cqpx(self.g_filter), cqpx(edge_found), cqpx(morph_img), cqpx(circle_im), cqpx(template), cqpx(cutout),
-        #                11
-                     angles, distances, cqpx(spline_im)]
-
-
-        # output[0][0] = cqpx(spline_im)
-
+        #               0               1           2                         3
+        output[1] = [cqpx(gls_image), histogram, cqpx(self.b_filter), cqpx(filtered_image2),
+                     #          4                          5                 6                  7
+                     cqpx(filterf.prep_fft(fourier)), cqpx(self.g_filter), cqpx(edge_found), cqpx(morph_img),
+                     #       8               9          10           11       12               13
+                     cqpx(circle_im), cqpx(template), cqpx(cutout), angles, distances, cqpx(spline_im)]
 
         return output
-

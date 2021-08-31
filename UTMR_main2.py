@@ -8,7 +8,7 @@ import warnings
 import numpy as np
 import pyqtgraph as pg
 from PyQt5 import QtWidgets
-from PyQt5.QtCore import QTimer, QThreadPool, QFile
+from PyQt5.QtCore import QTimer, QThreadPool
 from PyQt5.QtGui import QPixmap, QColor
 
 import classes.class_extra
@@ -36,7 +36,12 @@ def set_to_ms(self: QtWidgets.QLineEdit,seconds,cutoff = 8, mode = 'normal',ns=F
             self.tc = 0
             self.t_max = self.strstr(np.max(self.za),cutoff)
             self.t_min = self.strstr(np.min(self.za),cutoff)
-        self.za[self.tc] = ms
+        try:
+            self.za[self.tc] = ms
+        except IndexError:
+            self.tc = 0
+            self.za = np.zeros(self.fps)
+            self.za[self.tc] = ms
         self.mean = np.mean(self.za)
         ms_string = self.strstr(self.mean,cutoff)
         self.tc += 1
@@ -367,7 +372,6 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         # called whenever the main screen should be updated
         self.lineEdit_uaT.start()
 
-        check_input = [self.checkBox_sobel, self.checkBox_Canny]
         if self.morph_state[0][1] == "image":
             # only done on initializer run
             self.morph_state[0][0] = self.checkBox_morph.isChecked()
@@ -381,7 +385,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
                       self.lineEdit_segT,self.lineEdit_lfT, self.lineEdit_cqpx, self.lineEdit_tmT,
                       self.lineEdit_sortT, self.lineEdit_drawT, self.lineEdit_spl1T, self.lineEdit_spl2T]
 
-        output = self.CurMov.update(check_input, morph_vars, segment_state, circ_state,timer_list)
+        output = self.CurMov.update(morph_vars, segment_state, timer_list)
         self.lineEdit_sumT.stop()
         # to implement:!
         # Depending on the RADIOBUTTON: show different images..

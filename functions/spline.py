@@ -29,7 +29,8 @@ def get_spline(keypoints, image, parameters=None):
     for point in keypoints:
         vert_point = np.reshape(np.array(point), (2, 1))
         new_point = M.dot(vert_point)
-        new_point[1] += w - 1  # crucial step (SHOULD BE W, but did it wrong @21)
+        new_point[1] += w - 1
+        # you can do the dot if you extend vertpoint: [x,y,1]
         conlist.append((int(new_point[0]), int(new_point[1])))
 
     # print(f"conlist: {conlist}")
@@ -57,14 +58,26 @@ def get_spline(keypoints, image, parameters=None):
     # [x1, y1]] etc..
     thelist = np.array([[x, y] for x, y in zip(xnew2, ynew2)], dtype="int")
     # print(f"this is the list{thelist}")
-    return thelist
+
+    thelist_new = []
+
+    cx, cy = (84.5, 84.5)  # 170 length, point 169 to rotate arround because we start at 0.
+    Ms = np.round(cv2.getRotationMatrix2D((cx, cy), -90, 1))  # CCW is positive!
+
+    for point in thelist:
+        point = (*point, 1)
+        vert_point = np.reshape(np.array(point), (3, 1))
+        new_point = Ms.dot(vert_point)
+        thelist_new.append((int(new_point[0]), int(new_point[1])))
+
+    return thelist_new
 
 
 def draw_spline(image, thelist, mask, parameter):
     if thelist == []:
         return image, []
 
-    ye = time.perf_counter()
+
     channel = np.copy(image)
     w, h = image.shape
     cimage = np.zeros((w, h, 3))
@@ -73,10 +86,6 @@ def draw_spline(image, thelist, mask, parameter):
     cimage[:, :, 1] = channel
     cimage[:, :, 2] = channel
 
-    #   image = cv2.rotate(image,cv2.ROTATE_90_COUNTERCLOCKWISE)
-    mask = cv2.rotate(mask, cv2.ROTATE_90_COUNTERCLOCKWISE)
-    cimage = cv2.rotate(cimage, cv2.ROTATE_90_COUNTERCLOCKWISE)
-    print(f"time1 took {(time.perf_counter() - ye) * 1000}")
 
     # we now want to round the list, to make them into accessible pixel values for plotting.
     # by drawing straight lines between each pixel value, we can recreate the spline in an image.
@@ -88,6 +97,8 @@ def draw_spline(image, thelist, mask, parameter):
     _ = next(manager)
     _ = next(manager)
 
+    q = len(thelist)
+
     for coord_iteration in thelist:
         if firstpoint is True:
             point_1 = coord_iteration
@@ -95,7 +106,7 @@ def draw_spline(image, thelist, mask, parameter):
         elif firstpoint is False:
             # rotate counterclockwise so the top point of the tip is point1
             doneyet = next(manager, True)
-            point_2 = (coord_iteration[0], coord_iteration[1])
+            point_2 = coord_iteration
             # doneyet is implemented to make sure the tip and end have their distance measured at the right place
             # uncomment both cv2.line's to see
             if doneyet is True:
@@ -104,20 +115,23 @@ def draw_spline(image, thelist, mask, parameter):
                 # cv2.line(img=cimage, pt1=point_2, pt2=spoints, color=[255,0,0], thickness=1)
                 print(f"time1 took {(time.perf_counter() - ye) * 1000}")
             else:
+                ye = time.perf_counter()
                 colorz, distz, spoints = color_determine(point_1, mask, parameter)
-                # cv2.line(img=cimage, pt1=point_1, pt2=spoints, color=[255,0,0], thickness=1)
+                print(f"time1 took {(time.perf_counter() - ye) * 1000}")
+                cv2.line(img=cimage, pt1=point_1, pt2=spoints, color=[255,0,0], thickness=1)
 
             dist.append(distz)
             cv2.line(img=cimage, pt1=point_1, pt2=point_2, color=colorz, thickness=1)
             point_1 = point_2
 
     # print(dist)
-    return cv2.rotate(cimage, cv2.ROTATE_90_CLOCKWISE), dist
+    return cimage, dist
 
 
 def color_determine(point, mask, parameter):
+    eh = time.perf_counter()
     spoints, radius = dist_determine(point, mask)
-
+    print(f"time2 took {(time.perf_counter() - eh) * 1000}")
     # print(parameter)
 
     safe = parameter[2]

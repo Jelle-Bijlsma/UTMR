@@ -110,15 +110,11 @@ def draw_spline(image, thelist, mask, parameter):
             # doneyet is implemented to make sure the tip and end have their distance measured at the right place
             # uncomment both cv2.line's to see
             if doneyet is True:
-                ye = time.perf_counter()
                 colorz, distz, spoints = color_determine(point_2, mask, parameter)
                 # cv2.line(img=cimage, pt1=point_2, pt2=spoints, color=[255,0,0], thickness=1)
-                print(f"time1 took {(time.perf_counter() - ye) * 1000}")
             else:
-                ye = time.perf_counter()
                 colorz, distz, spoints = color_determine(point_1, mask, parameter)
-                print(f"time1 took {(time.perf_counter() - ye) * 1000}")
-                cv2.line(img=cimage, pt1=point_1, pt2=spoints, color=[255,0,0], thickness=1)
+                #.line(img=cimage, pt1=point_1, pt2=spoints, color=[255,0,0], thickness=1)
 
             dist.append(distz)
             cv2.line(img=cimage, pt1=point_1, pt2=point_2, color=colorz, thickness=1)
@@ -129,9 +125,9 @@ def draw_spline(image, thelist, mask, parameter):
 
 
 def color_determine(point, mask, parameter):
-    eh = time.perf_counter()
+    #eh = time.perf_counter()
     spoints, radius = dist_determine(point, mask)
-    print(f"time2 took {(time.perf_counter() - eh) * 1000}")
+    #print(f"time2 took {(time.perf_counter() - eh) * 1000}")
     # print(parameter)
 
     safe = parameter[2]
@@ -167,68 +163,51 @@ def color_determine(point, mask, parameter):
     return color, radius, spoints
 
 
-def dist_determine(point, mask):
+def dist_determine(point,mask):
     xcent, ycent = point
-    checkvar = 0
-    mask = np.transpose(mask)
-    for radius in range(1, 100):
-        rstep = int(radius / 2)
 
-        # horizontal
-        y = 0
-        yp = y + ycent
-        x = int((radius ** 2 - (yp - ycent) ** 2) ** 0.5)
-        iy = int(y)
+    # instead of drawing a full circle, draw a spare one, consisting of 4 lines at
+    # 0 degree (horizontal)
+    # 30 degree
+    # 60 degree
+    # 90 degree (vertical)
 
-        if mask[(x + xcent, iy + ycent)] == checkvar:
-            return (x + xcent, iy + ycent), radius
-        if mask[(-x + xcent, iy + ycent)] == checkvar:
-            return (-x + xcent, iy + ycent), radius
+    # predefine so we are FAST!
+    # remember x = r*cos(theta) and y = r*sin(theta)
+    val1 = 0.866  # cos(30), sin(60) sqrt(3)/2
+    val2 = 0.5    # cos(60), sin(30)
 
-        # the vertical lines
-        y = radius
-        yp = y + ycent
-        x = int((radius ** 2 - (yp - ycent) ** 2) ** 0.5)
-        iy = int(y)
-        if mask[(x + xcent, iy + ycent)] == checkvar:
-            return (x + xcent, iy + ycent), radius
-        if mask[(-x + xcent, -iy + ycent)] == checkvar:
-            return (x + xcent, -iy + ycent), radius
+    points = [tuple, tuple, tuple,
+              tuple, tuple, tuple,
+              tuple, tuple, tuple,
+              tuple, tuple, tuple]
 
-        # upper diagonal
-        y = rstep
-        yp = y + ycent
-        x = int((radius ** 2 - (yp - ycent) ** 2) ** 0.5)
-        iy = int(y)
+    for r in range(1,100):  # r for radius
+        sq = int(val1 * r)
+        h = int(val2 * r)
+        # quadrant 1
+        points[0] = (r+xcent, 0+ycent)
+        points[1] = (sq+xcent,h+ycent)
+        points[2] = (h+xcent,sq+ycent)
+        # quadrant 2
+        points[3] = (0+xcent,r+ycent)
+        points[4] = (-sq+xcent,h+ycent)
+        points[5] = (-h+xcent,sq+ycent)
+        # quadrant 3
+        points[6] = (-r+xcent,0+ycent)
+        points[7] = (-sq+xcent,-h+ycent)
+        points[8] = (-h+xcent,-sq+ycent)
+        # quadrant 4
+        points[9] = (0+xcent,-r+ycent)
+        points[10] = (h+xcent,-sq+ycent)
+        points[11] = (sq+xcent,-h+ycent)
 
-        if mask[(x + xcent, iy + ycent)] == checkvar:
-            return (x + xcent, iy + ycent), radius
+        if r > 24:
+            print(points)
 
-        if mask[(-x + xcent, iy + ycent)] == checkvar:
-            return (-x + xcent, iy + ycent), radius
-
-        if mask[(x + xcent, -iy + ycent)] == checkvar:
-            return (x + xcent, -iy + ycent), radius
-
-        if mask[(-x + xcent, -iy + ycent)] == checkvar:
-            return (-x + xcent, -iy + ycent), radius
-
-        # the lower diagonals
-        y = int(radius - rstep * 0.25)
-        yp = y + ycent
-        x = int((radius ** 2 - (yp - ycent) ** 2) ** 0.5)
-        iy = int(y)
-
-        if mask[(x + xcent, iy + ycent)] == checkvar:
-            return (x + xcent, iy + ycent), radius
-
-        if mask[(-x + xcent, iy + ycent)] == checkvar:
-            return (-x + xcent, iy + ycent), radius
-
-        if mask[(x + xcent, -iy + ycent)] == checkvar:
-            return (x + xcent, -iy + ycent), radius
-
-        if mask[(-x + xcent, -iy + ycent)] == checkvar:
-            return (-x + xcent, -iy + ycent), radius
+        for ii in range(11):
+            # gotta switch em w.r.t. array!
+            if mask[(points[ii][1],points[ii][0])] == 255:
+                return points[ii],r
 
     return [], []

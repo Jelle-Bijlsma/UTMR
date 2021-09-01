@@ -16,9 +16,11 @@ def change_qpix(frame: np.ndarray):
         # print('empty ')
         # initialisation clause. When called with an empty array, the frame will be set to an empty 100,100.
         frame = np.zeros([100, 100], dtype='uint8')
+
     if frame.dtype != np.uint8:  # this check is very important. Frames already in uint8 will go to zero if
         frame_normalized = (frame * 255) / np.max(frame)  # normalized like this
         frame = frame_normalized.astype(np.uint8)
+
     if len(frame.shape) == 2:
         w, h = frame.shape
         qim = QtGui.QImage(frame.data.tobytes(), h, w, h, QtGui.QImage.Format_Indexed8)

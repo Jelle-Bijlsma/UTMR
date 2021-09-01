@@ -1,5 +1,3 @@
-import copy
-
 # specific call since it is used often (and maybe a bit legacy)
 import cv2
 import numpy as np
@@ -10,39 +8,6 @@ import functions.filter as filterf
 import functions.line_find as lf
 import functions.spline as spl
 import functions.template as tpm
-
-
-def check_equal(fun, first_result: tuple, keyword, **kwargs):
-    """"
-    function checks if anything changed..
-    If it didnt it returns the cached value. This speeds up the calculation later on
-    """
-
-    # to note, kwargs is a dictionary.
-    # used params should always be passed last
-    used_params = first_result[-1]
-
-    if not isinstance(used_params, dict):
-        raise ValueError(f"last passed variable type is {type(used_params)}, not dict!")
-
-    if keyword in used_params:
-        if kwargs['parameters'] == used_params[keyword]:
-            # print("save a calc")
-            # when the parameters in the 'used' bin are the same as the fed parameters, return cached
-            return first_result
-
-    # if not the same, do the calculation with all the keyword arguments
-    a = fun(**kwargs)
-    newdict = copy.copy(used_params)
-    popmode = False
-    for key in used_params:
-        if keyword == key:
-            popmode = True
-        if popmode is True:
-            newdict.pop(key)
-    # and save the parameters in the 'used_params' variable
-    newdict[keyword] = kwargs['parameters']
-    return a + (newdict,)
 
 
 class MovieUpdate:
@@ -57,6 +22,7 @@ class MovieUpdate:
         self.parameters = {}
         self.used_parameters = {}
         self.currentframe = None
+        self.kernel = cv2.getStructuringElement(shape=0, ksize=(2, 2))
 
         # results
         self.gls_image = []
@@ -75,11 +41,6 @@ class MovieUpdate:
         t1 = cv2.imread("./data/templates/scale1.png", 0)
         t2 = cv2.imread("./data/templates/scale2.png", 0)
         self.template_list = [t1, t2]
-        # t3
-        #
-        # t4
-        # t5
-        # t6
 
     def get_imlist(self, imlist):
         """
@@ -115,46 +76,24 @@ class MovieUpdate:
         key = "".join(key)
         # the value of the dict key is the evaluation of the given function
         self.parameters[key] = fun()
-        # print("wrote a key")
-        # print(self.parameters)
 
     def update(self, morph_vars, segment_state, timer_list):
-        para = self.parameters
-        glsT, preT, edgeT, morphT, segT, lfT, cqpxT, tmT, sortT, drawT, spl1T, spl2T = timer_list
-
-        # we do this to enter the second row of keys into the dictionary.
-        # they dont appear by themselves so they are forced in.
-        if 'GLS2' not in para:
-            iterdic = copy.copy(para)
-            for key in iterdic:
-                key2 = key + "2"
-                para[key2] = para[key]
-            print("we failed SON4")
-
-        base_image = np.copy(self.currentframe)
-        output = [list, list]
-
-        morph_vars1 = [morph_vars[0][0], morph_vars[1], morph_vars[2]]
-        morph_vars2 = [morph_vars[0][1], morph_vars[1], morph_vars[2]]
-
         """"
-        This part is left in since it refers to the 'check_equal' which is a function to check whether calcs
-        are not done too often. Say you are changing a hough circlefinding parameter... Now, the code recalculates
-        everything, starting from GLS. Bailed on the idea because I couldn't make it work here. Sort of worked during
-        the 'movieclass/frameclass' era, however I bailed on the idea since the code should be able to complete fully
-        in 1/15 seconds, so the time gain is mariginal w.r.t. the added complexity. Left it in as an exercise to the 
-        reader. Maybe ditch equality checks and use a more direct assignment approach with saved state variables as
-        in 'movieclass/frameclass'?
-        
-        # 'expected_outcome' should be: return values of 'fun' from 'check_equal' + 'used_parameters'
-        # 'check_equal' goes like: 'fun' to check, 'expected_outcome', keyword (for dict), and keyword variables
-        # that go into 'fun'.
-        # do graylevel slicing and calculate the histogram. Only KWARGS go into the function itself
-        expected_outcome = (self.gls_image, self.histogram, self.used_parameters)
-        self.gls_image, self.histogram, self.used_parameters = check_equal(
-            ipgun.calc_gls, expected_outcome, 'GLS', image=base_image, parameters=para['GLS'])
+        This is the place where 'all the action is' regarding the
+
         """
 
+        # due to the C implementation of numpy, np.ndarray has the tendancy to be shared in memory
+        # all kinds of funky things happen when you omit this step.
+        base_image = np.copy(self.currentframe)
+
+        para = self.parameters  # shorthand notation
+        output = [list, list]  # predefine
+        glsT, preT, edgeT, morphT, segT, lfT, cqpxT, tmT, sortT, drawT, spl1T, spl2T = timer_list
+        # transfer and unpack class instances (of QWidgets.QLineEdit) for usage of added methods for timing
+
+        # by calling .start and .stop of the appropriate lineEdit, the performance of the piece of code can
+        # be measured. Nanosecond possibility.
         glsT.start(ns=False)
         gls_image, histogram = process.calc_gls(base_image, para['GLS'])
         glsT.stop(mode='avg', ns=False, cutoff=5)
@@ -179,11 +118,12 @@ class MovieUpdate:
         edgeT.start()
         edge_found, self.edge_status = edge.edge_call(filtered_image2, para['canny'], para['sobel'])
         # what am i doing on the next line?!
-        no_edgefinding = np.all(np.sort(edge_found) == np.sort(filtered_image2))
+        no_edgefinding = not (para['canny'][0] or para['sobel'])
         # no_edgefinding = False
         edgeT.stop(mode='avg', cutoff=5)
 
         morphT.start()
+        morph_vars1 = [morph_vars[0][0], morph_vars[1], morph_vars[2]]
         morph_img = edge.do_morph(edge_found, morph_vars1, no_edgefinding)
         morphT.stop(mode='avg', cutoff=5)
 
@@ -219,7 +159,9 @@ class MovieUpdate:
 
         # call 2 edge function, to determine wheter canny or sobel is used...
         edge_found, self.edge_status = edge.edge_call(filtered_image2, para['canny2'], para['sobel2'])
-        no_edgefinding = np.all(np.sort(edge_found) == np.sort(filtered_image2))
+        no_edgefinding = not (para['canny2'][0] or para['sobel2'])
+
+        morph_vars2 = [morph_vars[0][1], morph_vars[1], morph_vars[2]]
         morph_img = edge.do_morph(edge_found, morph_vars2, no_edgefinding)
 
         # circle finding
@@ -243,7 +185,8 @@ class MovieUpdate:
         spl1T.stop(mode='avg', cutoff=5)
 
         spl2T.start()
-        spline_im, distances = spl.draw_spline(pre_spline_im, spline_coords, mask, para['template'])
+        mask2 = cv2.morphologyEx(mask, cv2.MORPH_GRADIENT, self.kernel)
+        spline_im, distances = spl.draw_spline(pre_spline_im, spline_coords, mask2, para['template'])
         spl2T.stop(mode='avg', cutoff=5)
 
         template = lf.draw_bb(para['linefinder'], template, spline_coords)
@@ -251,9 +194,6 @@ class MovieUpdate:
         cutout, angles = lf.takelines(para['linefinder'], spline_coords, mask)
         lfT.stop(mode='avg', cutoff=5)
 
-        # print(filtered_image2.shape)
-        # print(filtered_image2.dtype)
-        # print(base_image.shape)
         """"
         Still need to fix: coordinates are the lower left vertex of the matched template. To draw square I add 15
         Which is the approximate square of the template. Get it right soon. 

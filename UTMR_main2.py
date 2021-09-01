@@ -1,114 +1,73 @@
+"""
+Main script of UTwente MR-Suite
+Contains the 'BuildUp' Class which is the event-handler for the GUI.
+Check https://github.com/Jelle-Bijlsma/UTMR if you have the latest version
+Most of the parts should be commented adequately. Make sure to read the ReadMe.md
+and the PDF (upcoming).
+Wrote this and accompanying functions for my master thesis
+
+Jelle Benedictus Bijlsma 2021
+"""
+
 import pickle
 import sys
 import os
 import time
 import warnings
-
-
 import numpy as np
+
+# classes related to PyQT GUI
 import pyqtgraph as pg
 from PyQt5 import QtWidgets
 from PyQt5.QtCore import QTimer, QThreadPool
 from PyQt5.QtGui import QPixmap, QColor
 
-import classes.class_extra
-import classes.movieclass_2 as mvc2
-import functions.auxiliary
-from QT_Gui import gui_full
-from classes.class_extra import SliderClass as SliderClass
+import classes.class_extra                                          # contains additional classes used
+import classes.movieclass_2 as mvc2                                 # responsible for all the vision/processing
+import functions.auxiliary                                          # functions for DICOM editor
+from QT_Gui import gui_full                                         # the actual GUI file
+from classes.class_extra import SliderClass as SliderClass          # too complex for short description
+import classes.class_addition                                       # Extends the LineEdit class
 
 
-def set_to_ms(self: QtWidgets.QLineEdit,seconds,cutoff = 8, mode = 'normal',ns=False):
-    if self.za is None:
-        self.za = np.zeros(self.fps)
-    if ns is False:
-        ms = seconds * 1000
-    else:
-        # this is really awkward but okay..
-        ms = seconds
-
-    if mode == 'normal':
-        ms_string = self.strstr(ms,cutoff)
-
-    #elif mode == 'avg':
-    else:
-        if self.tc == self.fps or self.tc == 0:
-            self.tc = 0
-            self.t_max = self.strstr(np.max(self.za),cutoff)
-            self.t_min = self.strstr(np.min(self.za),cutoff)
-        try:
-            self.za[self.tc] = ms
-        except IndexError:
-            self.tc = 0
-            self.za = np.zeros(self.fps)
-            self.za[self.tc] = ms
-        self.mean = np.mean(self.za)
-        ms_string = self.strstr(self.mean,cutoff)
-        self.tc += 1
-
-    self.setText(ms_string)
-
-def strip_str(self, num,cutoff):
-    return str(num)[0:cutoff]
-
-def start(self: QtWidgets.QLineEdit, ns = False):
-    if ns is False:
-        self.start_t = time.perf_counter()
-    else:
-        self.start_t = time.perf_counter_ns()
-
-def stop(self: QtWidgets.QLineEdit,cutoff = 8, mode = 'normal',ns = False):
-    if ns is False:
-        elapsed = time.perf_counter() - self.start_t
-    else:
-        elapsed = time.perf_counter_ns() - self.start_t
-
-    self.setTime(elapsed, cutoff, mode, ns=ns)
-
-
-
-QtWidgets.QLineEdit.setTime = set_to_ms
-QtWidgets.QLineEdit.start = start
-QtWidgets.QLineEdit.stop = stop
-QtWidgets.QLineEdit.strstr = strip_str
-
-QtWidgets.QLineEdit.tc = 0  # times called (tc)
-QtWidgets.QLineEdit.start_t = 0
-QtWidgets.QLineEdit.za = None
-QtWidgets.QLineEdit.fps = 15
-
-# the whole thing is just existing within this class.
 class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
     def __init__(self, parent=None):
         super(BuildUp, self).__init__(parent)
         self.setupUi(MainWindow)
-        # start initializing variables
+        # start initializing variables (not very interesting!)
         self.timer = QTimer()
-        self.timer.timeout.connect(self.next_frame)
-        self.timer_value = self.spinbox_fps.value()
         self.threadpool = QThreadPool()
-        self.CurMov = mvc2.MovieUpdate()  # name of the class
-        self.imlist = []
-        self.histogramx = list(range(0, 255))  # the x-range of the histogram
+
+        self.CurMov = mvc2.MovieUpdate()
+
+        self.FPS = self.spinBox_FPS.value()
+        self.timer_value = self.spinbox_fps.value()
+        self.frametime = time.perf_counter()
         self.bargraph = pg.BarGraphItem()  # the histogram widget inside plotwidget (which is called self.histogram)
-        self.morphstatus = False
+        self.histogramx = list(range(0, 255))  # the x-range of the histogram
         self.floodparam = False
-        self.radio_circle = False
-        self.radio_image = True
         self.circleparam = False
         self.coords = None
+        self.imlist = []
         self.past_10 = np.zeros(10)
         self.update_call = 0
         self.req_time = 0
-        self.FPS = self.spinBox_FPS.value()
 
-        self.frametime = time.perf_counter()
+        # morphological operations are not entirely done by the movieclass due to their interaction with
+        # the user interface, that is why some options are initialized here.
+        self.morphstatus = False
+        self.radio_circle = False
+        self.radio_image = True
 
         self.valid_ops = ["dilate", "erosion", "m_grad", "blackhat", "whitehat"]
         radiotuple = (self.radioButton_image, self.radioButton_circle)
-
         #                       image = 0       circle = 1
         self.morph_state = [[False, "image"], [False, "dilate kernel: 7 shape: 0"]]
+
+        # this one has to be initialized before the sliderclass
+        self.timer.timeout.connect(self.next_frame)
+
+
 
         # slider list for the GLS
         sl_gls = [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
@@ -342,7 +301,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         # called when the timer says it is time for the next frame
         # i.e. increments '.frame_number'
         current_time = time.perf_counter()
-        self.lineEdit_frameT.setTime(current_time-self.frametime)
+        self.lineEdit_frameT.setTime(current_time - self.frametime)
         self.frametime = current_time
 
         self.CurMov.get_frame()  # MovieClass method to go to the next frame index
@@ -378,11 +337,10 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             self.morph_state[0][1] = self.textEdit_morph.toPlainText()
         morph_vars = [self.morph_state, self.valid_ops, self.checkBox_morph]
         segment_state = [self.checkBox_segment, self.coords]
-        circ_state = []
         self.lineEdit_sumT.start()
 
-        timer_list = [self.lineEdit_glsT,self.lineEdit_preT,self.lineEdit_edgeT,self.lineEdit_morphT,
-                      self.lineEdit_segT,self.lineEdit_lfT, self.lineEdit_cqpx, self.lineEdit_tmT,
+        timer_list = [self.lineEdit_glsT, self.lineEdit_preT, self.lineEdit_edgeT, self.lineEdit_morphT,
+                      self.lineEdit_segT, self.lineEdit_lfT, self.lineEdit_cqpx, self.lineEdit_tmT,
                       self.lineEdit_sortT, self.lineEdit_drawT, self.lineEdit_spl1T, self.lineEdit_spl2T]
 
         output = self.CurMov.update(morph_vars, segment_state, timer_list)
@@ -429,8 +387,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.lineEdit_uaT_min.setText(self.lineEdit_uaT.t_min)
         self.lineEdit_uaT_max.setText(self.lineEdit_uaT.t_max)
 
-        self.lineEdit_difT.setText(str((self.req_time*1000-self.lineEdit_uaT.mean)/self.FPS)[0:8])
-
+        self.lineEdit_difT.setText(str((self.req_time * 1000 - self.lineEdit_uaT.mean) / self.FPS)[0:8])
 
     def morphstring_add(self, stringz):
         """"
@@ -531,7 +488,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
 
     def play_button(self):
         self.FPS = self.spinBox_FPS.value()
-        self.req_time = 1/self.FPS
+        self.req_time = 1 / self.FPS
         current_timer = int((self.req_time) * 1000)
         self.lineEdit_tfpsT.setTime(self.req_time)
         if self.timer_value != current_timer:
@@ -644,10 +601,10 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
 if __name__ == "__main__":
     # chad no argument vs virgin sys.argv
     app = QtWidgets.QApplication(sys.argv)
-    #sshFile = "./QT_Gui/Combinear.qss"
+    # sshFile = "./QT_Gui/Combinear.qss"
     sshFile = "./QT_Gui/Dtor.qss"
     # its not dtor. It is from https://github.com/GTRONICK/QSS/blob/master/Aqua.qss
-    with open(sshFile,'r') as fh:
+    with open(sshFile, 'r') as fh:
         app.setStyleSheet(fh.read())
     MainWindow = QtWidgets.QMainWindow()
     ui = BuildUp()

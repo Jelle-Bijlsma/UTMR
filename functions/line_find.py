@@ -4,33 +4,36 @@ import cv2
 
 def draw_bb(params, img, cp):
     # print(cp)
-    if cp == []:
+    if cp == [] or params[0] is False:
         return img
     dx, dy = params[-2:]
     # fp = [cp[0][1],-cp[0][0]]
-    fp = [cp[0][1], cp[0][0]]
+    fp = [cp[0][0], cp[0][1]]
     # print(f"fp={fp}")
     # trans = (fp[1], -fp[0])
-    return cv2.rectangle(img, (fp[0] - dx - 7, fp[1] + dy), (fp[0] + dx - 7, fp[1] - dy), [112, 51, 173])
+    return cv2.rectangle(img, (fp[0] - 7 - dx, fp[1] -7 - dy), (fp[0] + dx + 7, fp[1] +7 + dy), [112, 51, 173])
 
 
 def takelines(params, cp, mask):
     # https://stackoverflow.com/questions/45322630/how-to-detect-lines-in-opencv
 
-    if cp == []:
+    if cp == [] or params[0] is False:
         return mask, []
     dx, dy = params[-2:]
+
+    # reverse again since we use it to acces elements
     fp = [cp[0][0], cp[0][1]]
 
     kernel = cv2.getStructuringElement(shape=0, ksize=(2, 2))
     mask = cv2.morphologyEx(mask, cv2.MORPH_GRADIENT, kernel)
 
-    xstart = fp[0] - dy - 7
-    xend = fp[0] + dy - 7
-    ystart = fp[1] + dx
-    yend = fp[1] - dx
+    xstart = fp[0] - 7 -dx
+    ystart = fp[1] -7 - dy
 
-    mask_crop = mask[xstart:xend, yend:ystart]
+    xend = fp[0] + dx + 7
+    yend = fp[1] + dy + 7
+
+    mask_crop = mask[ystart:yend, xstart:xend]
 
     rho = params[1]
     theta = params[2] / 1000

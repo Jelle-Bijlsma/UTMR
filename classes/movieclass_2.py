@@ -89,16 +89,16 @@ class MovieUpdate:
 
         para = self.parameters  # shorthand notation
         output = [list, list]  # predefine
-        glsT, preT, edgeT, morphT, segT, lfT, cqpxT, tmT, sortT, drawT, spl1T, spl2T = timer_list
+        gls_t, pre_t, edge_t, morph_t, seg_t, lf_t, cqpx_t, tm_t, sort_t, draw_t, spl1_t, spl2_t = timer_list
         # transfer and unpack class instances (of QWidgets.QLineEdit) for usage of added methods for timing
 
         # by calling .start and .stop of the appropriate lineEdit, the performance of the piece of code can
         # be measured. Nanosecond possibility.
-        glsT.start(ns=False)
+        gls_t.start(ns=False)
         gls_image, histogram = process.calc_gls(base_image, para['GLS'])
-        glsT.stop(mode='avg', ns=False, cutoff=5)
+        gls_t.stop(mode='avg', ns=False, cutoff=5)
 
-        preT.start()
+        pre_t.start()
         if self.prevpar == [para['b_filter'], para['g_filter']]:
             pass
         else:
@@ -112,33 +112,33 @@ class MovieUpdate:
                                                          image=gls_image)
         filtered_image2, fourier, = filterf.apply_filter(parameters=para['g_filter'], filterz=self.g_filter,
                                                          image=filtered_image1)
-        preT.stop(mode='avg', cutoff=5)
+        pre_t.stop(mode='avg', cutoff=5)
 
         # call 2 edge function, to determine wheter canny or sobel is used...
-        edgeT.start()
+        edge_t.start()
         edge_found, self.edge_status = edge.edge_call(filtered_image2, para['canny'], para['sobel'])
         # what am i doing on the next line?!
         no_edgefinding = not (para['canny'][0] or para['sobel'])
         # no_edgefinding = False
-        edgeT.stop(mode='avg', cutoff=5)
+        edge_t.stop(mode='avg', cutoff=5)
 
-        morphT.start()
+        morph_t.start()
         morph_vars1 = [morph_vars[0][0], morph_vars[1], morph_vars[2]]
         morph_img = edge.do_morph(edge_found, morph_vars1, no_edgefinding)
-        morphT.stop(mode='avg', cutoff=5)
+        morph_t.stop(mode='avg', cutoff=5)
 
-        segT.start()
+        seg_t.start()
         mask, masked = edge.flood(morph_img, base_image, segment_state)
-        segT.stop(mode='avg', cutoff=5)
+        seg_t.stop(mode='avg', cutoff=5)
 
-        cqpxT.start()
+        cqpx_t.start()
         #              0                    1              2            3               4
         output[0] = [cqpx(base_image), cqpx(gls_image), histogram, cqpx(self.b_filter), cqpx(filtered_image2),
                      #              5                    6              7                8
                      cqpx(filterf.prep_fft(fourier)), cqpx(self.g_filter), cqpx(edge_found), cqpx(morph_img),
                      #   9           10
                      cqpx(mask), cqpx(masked)]
-        cqpxT.stop(mode='avg', cutoff=5)
+        cqpx_t.stop(mode='avg', cutoff=5)
 
         # Now we do everythang again........
         gls_image, histogram = process.calc_gls(masked, para['GLS2'])
@@ -167,32 +167,32 @@ class MovieUpdate:
         # circle finding
         circle_im = tpm.circlefind(para['circlefinder'], morph_img)
 
-        tmT.start()
+        tm_t.start()
         template, tlist = tpm.templatematch(morph_img, para['template'], self.template_list)
-        tmT.stop(mode='avg', cutoff=5)
+        tm_t.stop(mode='avg', cutoff=5)
 
-        sortT.start()
+        sort_t.start()
         real_coords = tpm.sort_out(tlist)
-        sortT.stop(mode='avg', cutoff=5)
+        sort_t.stop(mode='avg', cutoff=5)
 
         # print(real_coords)
-        drawT.start()
+        draw_t.start()
         pre_spline_im = tpm.drawsq(base_image, real_coords, cirq=True)
-        drawT.stop(mode='avg', cutoff=5)
+        draw_t.stop(mode='avg', cutoff=5)
 
-        spl1T.start()
+        spl1_t.start()
         spline_coords = spl.get_spline(real_coords, pre_spline_im, para['template'])
-        spl1T.stop(mode='avg', cutoff=5)
+        spl1_t.stop(mode='avg', cutoff=5)
 
-        spl2T.start()
+        spl2_t.start()
         mask2 = cv2.morphologyEx(mask, cv2.MORPH_GRADIENT, self.kernel)
         spline_im, distances = spl.draw_spline(pre_spline_im, spline_coords, mask2, para['template'])
-        spl2T.stop(mode='avg', cutoff=5)
+        spl2_t.stop(mode='avg', cutoff=5)
 
         template = lf.draw_bb(para['linefinder'], template, spline_coords)
-        lfT.start()
+        lf_t.start()
         cutout, angles = lf.takelines(para['linefinder'], spline_coords, mask)
-        lfT.stop(mode='avg', cutoff=5)
+        lf_t.stop(mode='avg', cutoff=5)
 
         """"
         Still need to fix: coordinates are the lower left vertex of the matched template. To draw square I add 15

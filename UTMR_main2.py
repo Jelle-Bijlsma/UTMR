@@ -22,16 +22,22 @@ from PyQt5 import QtWidgets
 from PyQt5.QtCore import QTimer, QThreadPool
 from PyQt5.QtGui import QPixmap, QColor
 
-import classes.class_extra                                          # contains additional classes used
-import classes.movieclass_2 as mvc2                                 # responsible for all the vision/processing
-import functions.auxiliary                                          # functions for DICOM editor
-from QT_Gui import gui_full                                         # the actual GUI file
-from classes.class_extra import SliderClass as SliderClass          # too complex for short description
-import classes.class_addition                                       # Extends the LineEdit class
+import classes.class_extra  # contains additional classes used
+import classes.movieclass_2 as mvc2  # responsible for all the vision/processing
+import functions.auxiliary  # functions for DICOM editor
+from QT_Gui import gui_full  # the actual GUI file
+from classes.class_extra import SliderClass as SliderClass  # too complex for short description (see file)
+import classes.class_addition  # Extends the LineEdit class
 
 
 class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
     def __init__(self, parent=None):
+
+        """"
+        During testing, set this
+        """
+        testing = True
+
         super(BuildUp, self).__init__(parent)
         self.setupUi(MainWindow)
         # start initializing variables (not very interesting!)
@@ -67,7 +73,14 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         # this one has to be initialized before the sliderclass
         self.timer.timeout.connect(self.next_frame)
 
-
+        """
+        The need for sliderclasses stems from the fact that sliders are used. Sliders come in groups which act on a 
+        specific part of the image processing (4 sliders for the Gray Level Slicing (GLS) are combined into one class).
+        The sliders need to update the parameter value as soon as they are changed, and display their value in a
+        QLineEdit widget. The slider should also facilitate setting to a specific value (loading in presets). 
+        
+        Thus to avoid repetitive code, the sliderclass is constructed.
+        """
 
         # slider list for the GLS
         sl_gls = [self.slider_brightness, self.slider_boost, self.slider_Lbound, self.slider_Rbound]
@@ -136,15 +149,21 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         # putting this ahead of the button switching causes problems due to morph switch actually
         # updating some values calling an indirect 'update_all'
         self.radioButton_image.toggled.connect(self.morph_switch)
-        # .radioButton_circle.toggled.connect(self.morph_switch)
 
         # load pictures in
         # self.mr_image.setPixmap(QPixmap("./QT_Gui/images/baseimage.png"))
         self.label_logo_uni.setPixmap((QPixmap("./QT_Gui/images/UTlogo.png")))
         self.lineEdit_save.isEnabled()
 
-        # self.stackedWidget.setCurrentIndex(0)  # initialize to homepage
-        self.stackedWidget.setCurrentIndex(1)  # initialize to video-edit-page
+        if testing is True:
+            self.stackedWidget.setCurrentIndex(1)  # initialize to video-edit-page
+        else:
+            self.stackedWidget.setCurrentIndex(0)  # initialize to homepage
+
+        """
+        Qt works with signals and slots to trigger specific actions. Most of them are configured here.
+        https://doc.qt.io/qt-5/signalsandslots.html
+        """
 
         # home page
         self.button_2dicom.clicked.connect(lambda: self.stackedWidget.setCurrentIndex(2))
@@ -185,17 +204,22 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.mr_image_2.mousePressEvent = self.get_pixel
         self.checkBox_segment.stateChanged.connect(self.update_all_things)
 
-        # timers
+        if testing is True:
+            self.filebrowse_png(True)  # load in all images and go through update cycle
+            self.para_loader("./data/parameters/parameters.pcl")
 
-        # running functions at start:
-        self.filebrowse_png(True)  # load in all images and go through update cycle
-        self.para_loader("./data/parameters/params_tm.txt")
+    """This was __init__. Now that this is done, we have created the entire event handling. All the functions
+    following now, are mentioned in the previous section. """
 
     # $$$$$$$$  functions relating to video editor
     def para_saver(self):
+        """"
+        Saves all the parameters used in a binaray file (.pcl for pickle)
+        """
         para_list = []
         path = self.lineEdit_params.text()
-        print(path)
+
+        #
         radio_is_circle = self.radioButton_circle.isChecked()
 
         if radio_is_circle:
@@ -212,7 +236,6 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         para_list.append(self.coords)
         para_list.append(self.checkBox_segment.isChecked())
         para_list.append(radio_is_circle)
-        # self.morph_state = [[False, "image"], [False, "dilate kernel: 7 shape: 0"]]
 
         pickle.dump(para_list, file)
         file.close()
@@ -335,21 +358,18 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             # only done on initializer run
             self.morph_state[0][0] = self.checkBox_morph.isChecked()
             self.morph_state[0][1] = self.textEdit_morph.toPlainText()
+
         morph_vars = [self.morph_state, self.valid_ops, self.checkBox_morph]
         segment_state = [self.checkBox_segment, self.coords]
-        self.lineEdit_sumT.start()
-
         timer_list = [self.lineEdit_glsT, self.lineEdit_preT, self.lineEdit_edgeT, self.lineEdit_morphT,
                       self.lineEdit_segT, self.lineEdit_lfT, self.lineEdit_cqpx, self.lineEdit_tmT,
                       self.lineEdit_sortT, self.lineEdit_drawT, self.lineEdit_spl1T, self.lineEdit_spl2T]
 
+        self.lineEdit_sumT.start()
         output = self.CurMov.update(morph_vars, segment_state, timer_list)
         self.lineEdit_sumT.stop()
-        # to implement:!
-        # Depending on the RADIOBUTTON: show different images..
 
         self.lineEdit_dispT.start()
-
         if self.radioButton_image.isChecked():
             self.histogram.clear()
             self.histogram.addItem(pg.BarGraphItem(x=self.histogramx, height=output[0][2], width=5, brush='g'))
@@ -372,21 +392,19 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             else:
                 self.fourier_image.setPixmap(output[1][8])
 
-        if output[1][11] != []:
+        if output[1][11]:
             self.lineEdit_tip_a.setText(str(round(output[1][11][0])))
             self.lineEdit_wall_a.setText(str(round(output[1][11][1])))
-        if output[1][12] != []:
+        if output[1][12]:
             self.lineEdit_tip_wall.setText(str(output[1][12][0]))
             self.lineEdit_closest.setText(str(min(output[1][12])))
         self.mr_image_2.setPixmap(output[0][0])
+
+        # timing related
         self.lineEdit_dispT.stop(mode='avg')
-
-        # now you want to do update2, on the improved and cutout frame..
-
         self.lineEdit_uaT.stop(mode='avg')
         self.lineEdit_uaT_min.setText(self.lineEdit_uaT.t_min)
         self.lineEdit_uaT_max.setText(self.lineEdit_uaT.t_max)
-
         self.lineEdit_difT.setText(str((self.req_time * 1000 - self.lineEdit_uaT.mean) / self.FPS)[0:8])
 
     def morphstring_add(self, stringz):

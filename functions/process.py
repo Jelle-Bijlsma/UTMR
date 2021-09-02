@@ -83,7 +83,7 @@ def calc_gls(image, parameters):
     img2 = np.reshape(gls, l * b)
     # taking the log due to the huge difference between the amount of completely black pixels and the rest
     # adding + 1 else taking the log is undefined (10log1) = ??
-    histogram = np.log10(np.bincount(img2, minlength=255) + 1)
+    histogram = np.log10(np.bincount(img2, minlength=255)+1)
     # min length else you will get sizing errors.
 
     return gls, histogram

@@ -13,6 +13,8 @@ Program confirmed to work in Python 3.9.5 with the following dependancies:
 * pyqtgraph               == 0.12.2
 * scipy                   == 1.7.1
 
+Tested to work on Ubuntu 20.04 and 21.4 only.
+
 If you get this error:
 
 _qt.qpa.plugin: Could not load the Qt platform plugin "xcb" in "" even though it was found. This application failed to_
@@ -27,6 +29,7 @@ Update the template matching (might be included in final release)
 2. Edit filename in `./classes/movieclass_2.py'
 3. ???
 4. Run
+
 
 ### how does it work?
 PyQt creates the event handler. For the video editor, the class `MovieClass` handles

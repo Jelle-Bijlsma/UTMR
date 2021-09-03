@@ -31,17 +31,26 @@ Update the template matching (might be included in final release)
 4. Run
 
 
-### how does it work?
-PyQt creates the event handler. For the video editor, the class `MovieClass` handles
-the movie, it contains attributes such as
-* current frame
-* max frames
-* video editing parameters such as brightness
-* framelist
+## How does it work?
+The GUI is event driven. In QT terms, this means that specific actions can emit `signals`. These signals can be linked 
+to specific actions. For example, pressing the **play** button will trigger a *button_press* event, which is linked
+to the **Play** function. This will then start a timer, which will emit a signal every X milliseconds. This signal is 
+picked up by the **next_frame** function, which will trigger a frame update, and redo all the image processing on
+the newly acquired image. All the linking and connecting of signals and receiving functions, or `slots` as they are 
+called, happens in the *\_\_init__* part of `UTMR_main2.py`.
 
-where `framelist` is a list of class instances of the `FrameClass` which 
-contain the frames, in numpy format and qpix (for displaying). and have methods
-such as `change_brightness`.
+In the main file, instances from the `./classes/` folder are created. `class_addition.py` extends current class
+capabilites. `class_extra` contains the **SliderClass**, which is used to tie together parameter acquisition from the 
+GUI to the main program. It also hosts classes that are used for multithreading. `movieclass_2.py` has one instance 
+and is responsible for doing all the image processing. (All functions/classes etc. have extensive comments to describe
+their functions and workings.)
 
-`MovieClass` also has methods such as `next_frame` and `return_frame` which can be 
-called from the event handler to iterate through the `framelist`
+In the folder `./functions/` all the additional functions are placed, and they are categorized according to their
+purpose (all filtering related functions are found in `filter.py` for example). 
+
+###detailed description
+
+
+
+
+

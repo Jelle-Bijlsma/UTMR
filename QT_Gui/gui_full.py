@@ -14,7 +14,7 @@ from PyQt5 import QtCore, QtGui, QtWidgets
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
-        MainWindow.resize(1525, 1260)
+        MainWindow.resize(1660, 1280)
         MainWindow.setFocusPolicy(QtCore.Qt.ClickFocus)
         MainWindow.setWindowOpacity(1.0)
         self.centralwidget = QtWidgets.QWidget(MainWindow)
@@ -26,7 +26,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents_4 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_4.setGeometry(QtCore.QRect(0, 0, 1529, 1147))
+        self.scrollAreaWidgetContents_4.setGeometry(QtCore.QRect(0, 0, 1640, 1181))
         self.scrollAreaWidgetContents_4.setObjectName("scrollAreaWidgetContents_4")
         self.gridLayout_6 = QtWidgets.QGridLayout(self.scrollAreaWidgetContents_4)
         self.gridLayout_6.setObjectName("gridLayout_6")
@@ -2466,7 +2466,7 @@ class Ui_MainWindow(object):
         self.gridLayout_5.addWidget(self.label, 3, 0, 1, 1)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1525, 22))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1660, 22))
         self.menubar.setObjectName("menubar")
         self.menuMenu = QtWidgets.QMenu(self.menubar)
         self.menuMenu.setObjectName("menuMenu")
@@ -2508,8 +2508,8 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuOptions.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.stackedWidget.setCurrentIndex(0)
-        self.tabWidget.setCurrentIndex(1)
+        self.stackedWidget.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(6)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -2539,7 +2539,7 @@ class Ui_MainWindow(object):
         self.label_mask_im.setText(_translate("MainWindow", "4th "))
         self.label_qim_tester.setText(_translate("MainWindow", "Before Edgefinding"))
         self.fourier_image.setText(_translate("MainWindow", "Fourier Spectrum"))
-        self.lineEdit_params.setText(_translate("MainWindow", "./data/parameters/params.txt"))
+        self.lineEdit_params.setText(_translate("MainWindow", "./data/parameters/parameters.pcl"))
         self.radioButton_image.setText(_translate("MainWindow", "filter image"))
         self.radioButton_circle.setText(_translate("MainWindow", "filter circle"))
         self.mr_image_2.setText(_translate("MainWindow", "MR_image2"))
@@ -2547,7 +2547,7 @@ class Ui_MainWindow(object):
         self.pb_play.setText(_translate("MainWindow", "Play"))
         self.pb_pause.setText(_translate("MainWindow", "Pause"))
         self.pb_reset.setText(_translate("MainWindow", "Reset"))
-        self.pb_load_movie.setText(_translate("MainWindow", "browse"))
+        self.pb_load_movie.setText(_translate("MainWindow", "Browse"))
         self.lineEdit_importpath.setText(_translate("MainWindow", "\"./filepath/to/some/file\""))
         self.pb_load_params.setText(_translate("MainWindow", "Load params"))
         self.pb_save_params.setText(_translate("MainWindow", "Save params"))

@@ -32,9 +32,14 @@ class Worker1(QtCore.QRunnable):
         self.a = 0
 
     def dicom2png(self, filelist, path, project_name):
+        """
+        :param filelist: is a list of all the filenames (str)
+        :param path: path to the folder (str)
+        :param project_name: (str)
+        :return: no return value
+        """
         self.signals.starting.emit()
         self.a = 0
-        # print("we here")
         for element in filelist:
             self.a = self.a + 1
             # disregard non-dicom files
@@ -53,7 +58,6 @@ class Worker1(QtCore.QRunnable):
             self.signals.progress.emit(self.a)
             plt.close()
         self.signals.finished.emit()
-        # print("and here")
         return
 
     def png2avi(self, path, fps, savename):

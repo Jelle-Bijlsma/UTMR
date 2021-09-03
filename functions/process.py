@@ -1,11 +1,10 @@
-import time
-import warnings
-
 import numpy as np
-from PyQt5 import QtGui, QtWidgets
-import cv2
-from scipy import interpolate
+from PyQt5 import QtGui
 
+"""Contains cqpix, which is responsible for presenting the image into a format readable for pyqt.
+Also some data type conversions and also the code for the graylevel slicing."""
+
+# or known better as cqpix
 def change_qpix(frame: np.ndarray):
     # some links i might need later
     # https://gist.github.com/belltailjp/a9538aaf3221f754e5bf
@@ -36,6 +35,7 @@ def change_qpix(frame: np.ndarray):
             raise Exception("QPIX problems")
     return QtGui.QPixmap.fromImage(qim)
 
+
 def float_uint8(fft_frame):
     if fft_frame.dtype == np.dtype('float64'):
         # doing this, seems to behave like a histogram equalization. Is there another way?
@@ -53,6 +53,7 @@ def float_uint8(fft_frame):
         frame_normalized = (fft_frame * 255) / np.max(fft_frame)  # normalized like this
         frame = frame_normalized.astype(np.uint8)
     return frame
+
 
 def calc_gls(image, parameters):
     """"
@@ -83,8 +84,7 @@ def calc_gls(image, parameters):
     img2 = np.reshape(gls, l * b)
     # taking the log due to the huge difference between the amount of completely black pixels and the rest
     # adding + 1 else taking the log is undefined (10log1) = ??
-    histogram = np.log10(np.bincount(img2, minlength=255)+1)
+    histogram = np.log10(np.bincount(img2, minlength=255) + 1)
     # min length else you will get sizing errors.
 
     return gls, histogram
-

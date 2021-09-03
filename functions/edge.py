@@ -2,8 +2,15 @@ import numpy as np
 from PyQt5 import QtWidgets
 import cv2
 
+""""
+Collection where all the edge finding functions are stored (& flood function) and the 
+core of the morphological operation.
+"""
 
 def edge_call(image, para_canny, para_sobel):
+    """"
+    Edge call is used to determine wheter canny is pressed, sobel, or both.
+    """
     true_canny = para_canny[0]
     true_sobel = para_sobel[0]
 
@@ -21,7 +28,7 @@ def edge_call(image, para_canny, para_sobel):
 
 def do_sobel(frame, parameters):
     """"
-    Left this in as a separate function for possibility of doing
+    Left this in as a separate function for possibility of doing separate sobel X, Y or a combination of them
     """
 
     ksize = parameters[0]
@@ -58,7 +65,6 @@ def do_morph(img, morph_vars, no_edgefinding):
     valid_ops: list = morph_vars[1]
     checkbox: QtWidgets.QCheckBox = morph_vars[2]
 
-    # print(f"we got morph_vars[0] it is: {morph_vars[0]}, and its type is {type(morph_vars[0])}")
 
     if morph_vars[0][0] is True:
         if no_edgefinding == np.bool_(False):

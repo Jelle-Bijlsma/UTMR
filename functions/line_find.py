@@ -1,9 +1,23 @@
 import numpy as np
 import cv2
 
+""""
+Notice how some functions have a 'tpz' variable. this is needed due to the offset of the template.
+Currently you need to implement these new templates by hand.
+This can be improved by creating a template class which hosts the dimensions and instances can be passed
+arround such that template_1.offset could give the correct dimensions. Also GUI option for template match
+
+"""
 
 def draw_bb(params, img, cp):
-    # print(cp)
+    """"
+    Draws a bounding box for the line finding. We only care for the wall-angle near the tip.
+    params:list with last two values containing bounding box size
+    img: image to draw on
+    cp: list of coordinates
+    return: drawn image
+    """
+    tpz = 7  # template size
     if cp == [] or params[0] is False:
         return img
     dx, dy = params[-2:]
@@ -11,27 +25,39 @@ def draw_bb(params, img, cp):
     fp = [cp[0][0], cp[0][1]]
     # print(f"fp={fp}")
     # trans = (fp[1], -fp[0])
-    return cv2.rectangle(img, (fp[0] - 7 - dx, fp[1] -7 - dy), (fp[0] + dx + 7, fp[1] +7 + dy), [112, 51, 173])
+    return cv2.rectangle(img, (fp[0] - tpz - dx, fp[1] -tpz - dy), (fp[0] + dx + tpz, fp[1] +tpz + dy),
+                         [112, 51, 173])
 
 
 def takelines(params, cp, mask):
+    """
+    How to detect the wall angle? We take the first detect point(i.e. the top point), and use the
+    bounding box parameters to take a slice out of the mask. From this slice, lines are determined.
+    Their angle is then calculated and averaged. This approach does not work for junctions yet.
+    :param params: parameters with keyword 'lf'
+    :param cp: (x,y) coordinates of markers
+    :param mask:
+    :return: cropped mask (img) and [tip_angle wall_angle] list
+    """
     # https://stackoverflow.com/questions/45322630/how-to-detect-lines-in-opencv
+
+
+    tpz = 7
 
     if cp == [] or params[0] is False:
         return mask, []
     dx, dy = params[-2:]
 
-    # reverse again since we use it to acces elements
     fp = [cp[0][0], cp[0][1]]
-
     kernel = cv2.getStructuringElement(shape=0, ksize=(2, 2))
+    # we do a morph gradient to get the OUTLINEs of the mask (which is filled)
     mask = cv2.morphologyEx(mask, cv2.MORPH_GRADIENT, kernel)
 
-    xstart = fp[0] - 7 -dx
-    ystart = fp[1] -7 - dy
+    xstart = fp[0] - tpz -dx
+    ystart = fp[1] -tpz - dy
 
-    xend = fp[0] + dx + 7
-    yend = fp[1] + dy + 7
+    xend = fp[0] + dx + tpz
+    yend = fp[1] + dy + tpz
 
     mask_crop = mask[ystart:yend, xstart:xend]
 
@@ -44,9 +70,6 @@ def takelines(params, cp, mask):
     lines = cv2.HoughLinesP(mask_crop, rho, theta, threshold, np.array([]),
                             min_line_length, max_line_gap)
 
-    # print(mask_crop.shape)
-
-    anglist = []
 
     """"
     Angle calculation is correct in this scenario but not robust to change. 
@@ -54,22 +77,15 @@ def takelines(params, cp, mask):
     Would need to do some coordinate transforms on the points
     """
 
+    anglist = []
     if lines is not None:
         for line in lines:
             for x1, y1, x2, y2 in line:
-                # print(f"point 1 {x1}, {y1}, point2 {x2}, {y2}")
-                # cv2.line(mask_crop, (x1, y1), (x2, y2), (0, 0, 255), 3)
                 cv2.line(mask_crop, (x1, y1), (x2, y2), 122, 3)
-                # mask_crop = cv2.circle(mask_crop, (30,0), 10, (250))
                 anglist.append(abs((np.arctan((y1 - y2) / (x1 - x2 + 0.0001)) / np.pi) * 180))
-                # print(f"atan = {np.arctan((y1-y2)/(x1-x2+0.0001))}")
 
-    # print(anglist)
-    # print(f"wall angle{np.mean(anglist)}")
     x1, y1 = cp[0]
-    # print(cp[0])
     x2, y2 = cp[4]
-    # print(cp[4])
     tip_angle = (((np.arctan(((y1 - y2)) / ((x1 - x2)))) / np.pi) * 180)
     wall_angle = np.mean(anglist)
 

@@ -11,7 +11,10 @@ import functions.template as tpm
 
 
 class MovieUpdate:
-
+    """"
+    This class is responsible for handling the collection of frames and properly edit them according to the GUI.
+    The movieclass stores the parameters and then the update class performs all the image manipulation
+    """
     def __init__(self):
         # we just initialize variables
         self.imlist = []
@@ -79,8 +82,7 @@ class MovieUpdate:
 
     def update(self, morph_vars, segment_state, timer_list):
         """"
-        This is the place where 'all the action is' regarding the
-
+        This is the place where 'all the action is' regarding the image manipulation.
         """
 
         # due to the C implementation of numpy, np.ndarray has the tendancy to be shared in memory
@@ -117,9 +119,7 @@ class MovieUpdate:
         # call 2 edge function, to determine wheter canny or sobel is used...
         edge_t.start()
         edge_found, self.edge_status = edge.edge_call(filtered_image2, para['canny'], para['sobel'])
-        # what am i doing on the next line?!
         no_edgefinding = not (para['canny'][0] or para['sobel'])
-        # no_edgefinding = False
         edge_t.stop(mode='avg', cutoff=5)
 
         morph_t.start()
@@ -140,7 +140,7 @@ class MovieUpdate:
                      cqpx(mask), cqpx(masked)]
         cqpx_t.stop(mode='avg', cutoff=5)
 
-        # Now we do everythang again........
+        # Now we do everything again........
         gls_image, histogram = process.calc_gls(masked, para['GLS2'])
 
         if self.prevpar2 == [para['b_filter2'], para['g_filter2']]:
@@ -175,7 +175,6 @@ class MovieUpdate:
         real_coords = tpm.sort_out(tlist)
         sort_t.stop(mode='avg', cutoff=5)
 
-        # print(real_coords)
         draw_t.start()
         pre_spline_im = tpm.drawsq(base_image, real_coords, cirq=True)
         draw_t.stop(mode='avg', cutoff=5)
@@ -193,11 +192,6 @@ class MovieUpdate:
         lf_t.start()
         cutout, angles = lf.takelines(para['linefinder'], spline_coords, mask)
         lf_t.stop(mode='avg', cutoff=5)
-
-        """"
-        Still need to fix: coordinates are the lower left vertex of the matched template. To draw square I add 15
-        Which is the approximate square of the template. Get it right soon. 
-        """
 
         #               0               1           2                         3
         output[1] = [cqpx(gls_image), histogram, cqpx(self.b_filter), cqpx(filtered_image2),

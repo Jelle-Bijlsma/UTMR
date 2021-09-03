@@ -10,6 +10,9 @@ The readme is not up to date, documentation is a bit lacking and some parts are 
 UTMR_main.py is the main event handler. It imports:
 
 (and a lot more, update this soon)
+>implying
+> >what
+> >>stop
 
 * PyQt5
 * CV2

@@ -1,12 +1,21 @@
-import time
 import warnings
-
 import numpy as np
 import cv2
 from scipy import interpolate
 
+"""
+All the functions regarding spline interpolation & drawing
+"""
+
 
 def get_spline(keypoints, image, parameters=None):
+    """
+    function gets the spline points based on keypoints.
+    :param keypoints:
+    :param image: requires image for reasons explained later
+    :param parameters:
+    :return:
+    """
     if parameters is None:
         return []
 
@@ -16,6 +25,15 @@ def get_spline(keypoints, image, parameters=None):
         # print(f"not enough circles {circles}")
         # print(len(circles[0]))
         return []
+
+    """"
+    Spline needs ascending X values to work. So the image has to be rotated by 90 degrees to work. However a 
+    90 degree rotation in cv2 is actually not a pure rotation but a rotation around a point. The location of this
+    point is questionable but it works. 
+    
+    I realized later you could probably also just switch X,Y around and get the spline coords, and then
+    change the spline coords back again. However, this transformation works just fine for now.
+    """
 
     # cx, cy = (169,0)  # 170 length, point 169 to rotate arround because we start at 0.
     # M = np.round(cv2.getRotationMatrix2D((cx,cy), 90, 1))  # CCW is positive!
@@ -42,6 +60,10 @@ def get_spline(keypoints, image, parameters=None):
     try:
         spl = interpolate.InterpolatedUnivariateSpline(x, y, k=2)
     except ValueError:
+        """
+        The function is called a few times during initialization with MANY, MANY points. This causes some of the
+        points to be on the same line. The spline can not be plotted like this, so we catch  the error it generates
+        """
         warnings.warn("Warning: function (get_spline) exited prematurely:\n"
                       "this normally happens during initialization. If you get this message in any other situation "
                       "too many coordinates have been passed to the 'get_spline' function."
@@ -57,12 +79,12 @@ def get_spline(keypoints, image, parameters=None):
     # [[x0, y0]
     # [x1, y1]] etc..
     thelist = np.array([[x, y] for x, y in zip(xnew2, ynew2)], dtype="int")
-    # print(f"this is the list{thelist}")
-
     thelist_new = []
 
     cx, cy = (84.5, 84.5)  # 170 length, point 169 to rotate arround because we start at 0.
     Ms = np.round(cv2.getRotationMatrix2D((cx, cy), -90, 1))  # CCW is positive!
+
+    # now we rotate the points again to their correct orientation.
 
     for point in thelist:
         point = (*point, 1)
@@ -74,6 +96,15 @@ def get_spline(keypoints, image, parameters=None):
 
 
 def draw_spline(image, thelist, mask, parameter):
+    """
+    Actually plot the spline, giving it a color based on the distance from the spline to the wall.
+
+    :param image:
+    :param thelist: list of coordinates
+    :param mask: mask OUTLINE required for distance finding (use a mask that has been gradiented)
+    :param parameter: parameters regarding coloring.
+    :return:
+    """
     if thelist == []:
         return image, []
 
@@ -93,11 +124,10 @@ def draw_spline(image, thelist, mask, parameter):
     point_1 = []  # keeps pycharm happy
     dist = []
 
+    # manager is a trick used to make sure the first and last point are properly used for distance calcing.
     manager = iter(thelist)
     _ = next(manager)
     _ = next(manager)
-
-    q = len(thelist)
 
     for coord_iteration in thelist:
         if firstpoint is True:
@@ -125,11 +155,18 @@ def draw_spline(image, thelist, mask, parameter):
 
 
 def color_determine(point, mask, parameter):
-    #eh = time.perf_counter()
-    spoints, radius = dist_determine(point, mask)
-    #print(f"time2 took {(time.perf_counter() - eh) * 1000}")
-    # print(parameter)
 
+    """
+    Color determine uses 'dist_determine' to find the correct color to plot. It uses a linear scale
+    Starting at green (safe) to go to yellow (medium) and eventually red (danger).
+
+    :param point: (x,y)
+    :param mask: mask outline
+    :param parameter: [sth sth safe medium danger] in pixeldistance
+    :return: color, radius, coordinates of closest wall piece
+    """
+
+    spoints, radius = dist_determine(point, mask)
     safe = parameter[2]
     medium = parameter[3]
     danger = parameter[4]
@@ -164,6 +201,13 @@ def color_determine(point, mask, parameter):
 
 
 def dist_determine(point,mask):
+    """
+    Highly function to determine distance from point to mask.
+    :param point: give point (x,y)
+    :param mask: mask outline
+    :return: closest point, radius
+    """
+
     xcent, ycent = point
 
     # instead of drawing a full circle, draw a spare one, consisting of 4 lines at
@@ -201,9 +245,6 @@ def dist_determine(point,mask):
         points[9] = (0+xcent,-r+ycent)
         points[10] = (h+xcent,-sq+ycent)
         points[11] = (sq+xcent,-h+ycent)
-
-        if r > 24:
-            print(points)
 
         for ii in range(11):
             # gotta switch em w.r.t. array!

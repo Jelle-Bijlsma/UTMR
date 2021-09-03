@@ -1,6 +1,13 @@
 # GUI
 
 Gui is made in QT designer 5.
+
+To get QT-designer, simply enter into a terminal:
+
+`sudo apt-get install qtcreator`
+
+This adds **Qt Designer** to Launchpad and allows for easy GUI editing.
+
 Output file is `gui_full.ui`
 
 Use terminal command:

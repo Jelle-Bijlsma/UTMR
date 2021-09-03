@@ -4,13 +4,15 @@ Gui is made in QT designer 5.
 Output file is `gui_full.ui`
 use terminal command 
 `$ pyuic5 -x gui_full.ui -o gui_full.py`
+To convert from *.ui* to *.py*
 
-Also possible: set `script.sh` to execute as program and run without terminal. This will check the *.ui* file every 10 seconds and monitor if it has been updated.
+## Tips
+### Automatically check for updates:
+Set `script.sh` to execute as program and run without terminal. This will check the *.ui* file every 10 seconds and monitor if it has been updated.
 If it has, it will run the conversion command, and recheck every 10 seconds. Due to it being written in bash, it is not resource intensive and put little to no additional stress on the machine.
 
-### Tips
 
-## Using exotic classes in Qt designer
+### Using exotic classes in Qt designer
 In Designer
 * create a QGraphicsView widget
 (“Graphics View” under the “Display Widgets” category)

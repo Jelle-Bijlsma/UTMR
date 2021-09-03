@@ -142,7 +142,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.radioButton_circle.setChecked(True)
         for clazz in SliderClass.all_sliders:
             clazz.getvalue()
-            print(f"{clazz.keyword} has the following params {clazz._params_image}")
+            # print(f"{clazz.keyword} has the following params {clazz._params_image}")
             clazz._coolfun()
         self.radioButton_image.setChecked(True)
 
@@ -206,7 +206,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
 
         if testing is True:
             self.filebrowse_png(True)  # load in all images and go through update cycle
-            self.para_loader("./data/parameters/parameters.pcl")
+            self.para_loader(stdpath=False)
 
     """This was __init__. Now that this is done, we have created the entire event handling. All the functions
     following now, are mentioned in the previous section. """
@@ -216,22 +216,24 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         """"
         Saves all the parameters used in a binaray file (.pcl for pickle)
         """
+
         para_list = []
         path = self.lineEdit_params.text()
-
-        #
+        # we need the 'image' button to be checked.
         radio_is_circle = self.radioButton_circle.isChecked()
 
         if radio_is_circle:
             self.radioButton_image.setChecked(True)
 
         file = open(path, 'wb')
+        # we go over all instances of the sliderclass to save their respective parameters
         for clazz in SliderClass.all_sliders:
             para1 = clazz._params_image
             para_list.append(para1)
             if clazz.radio_image is not None:
                 para2 = clazz._params_circle
                 para_list.append(para2)
+        # manually add the morph state, since it is no slider class yet they are parameters
         para_list.append(self.morph_state)
         para_list.append(self.coords)
         para_list.append(self.checkBox_segment.isChecked())
@@ -243,10 +245,14 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         if radio_is_circle:
             self.radioButton_circle.setChecked(True)
 
-    def para_loader(self, path=True):
-        if path is True:
+    def para_loader(self, stdpath=True):
+        """"
+        Load parameterset from LineEdit box. Same concept as the parasaver, but in reverse?
+        """
+        if stdpath is True:
             path = self.lineEdit_params.text()
-        print(path)
+        else:
+            path = "./data/parameters/parameters.pcl"
 
         file = open(path, 'rb')
         loaded_p_list = pickle.load(file)
@@ -295,8 +301,20 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             self.radioButton_circle.click()
 
     def filebrowse_png(self, test=False):
+        """"
+        filebrowse_png is what happens when you press the browse button to select a new file for playing.
+        It can also be called immediately (test=True) to enable easy start.
+
+        Function also crops the image (cut off additional whitespace). This has to be done manually
+        """
+
+        if self.timer.isActive():
+            # this can be done in parallel if you implement multithreading as done in the dicom editor
+            functions.auxiliary.popupmsg("please pause video", "warning")
+            return
+
         a = QtWidgets.QFileDialog()
-        a.setDirectory("./data/png/")
+        a.setDirectory("./data/png/")  #std directory
 
         if test is False:
             path = str(a.getExistingDirectory(MainWindow, 'select folder with pngs'))
@@ -313,6 +331,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             return
         self.pb_play.setEnabled(True)
         self.pb_play.setToolTip("")
+
         cropsize = [58, 428, 243, 413]  # im = im[58:428, 143:513]
         self.imlist = functions.auxiliary.loadin(filelist, path, size=cropsize)
         self.CurMov.get_imlist(imlist=self.imlist)
@@ -359,16 +378,19 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             self.morph_state[0][0] = self.checkBox_morph.isChecked()
             self.morph_state[0][1] = self.textEdit_morph.toPlainText()
 
+        # update morphology
         morph_vars = [self.morph_state, self.valid_ops, self.checkBox_morph]
         segment_state = [self.checkBox_segment, self.coords]
         timer_list = [self.lineEdit_glsT, self.lineEdit_preT, self.lineEdit_edgeT, self.lineEdit_morphT,
                       self.lineEdit_segT, self.lineEdit_lfT, self.lineEdit_cqpx, self.lineEdit_tmT,
                       self.lineEdit_sortT, self.lineEdit_drawT, self.lineEdit_spl1T, self.lineEdit_spl2T]
 
+        # CurMov.update() does all the image processing
         self.lineEdit_sumT.start()
         output = self.CurMov.update(morph_vars, segment_state, timer_list)
         self.lineEdit_sumT.stop()
 
+        # now all the acquired images from CurMov.update() are displayed
         self.lineEdit_dispT.start()
         if self.radioButton_image.isChecked():
             self.histogram.clear()
@@ -492,11 +514,15 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             self.textEdit_morph.setText(self.morph_state[1][1])
 
     def get_pixel(self, event):
+        # get_pixel is mapped to the mousepressevent in both mr_images to get coordinates for floodfilling
+
         x = event.pos().x()
         y = event.pos().y()
         h, w = self.CurMov.currentframe.shape
         xtot = self.mr_image.width()
         ytot = self.mr_image.height()
+        # we need to rescale the images. The displayed image has a different dimension than the actual image
+        # due to 'set_scaled_content = True'
         x = int((x / xtot) * w)
         y = int((y / ytot) * h)
         print(f"rescaled x = {x}, rescaled y = {y}")
@@ -505,10 +531,12 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.lineEdit_coords.setText(coords)
 
     def play_button(self):
+        # extra math for just the play button to determine what the current FPS is and how much time it needs
         self.FPS = self.spinBox_FPS.value()
         self.req_time = 1 / self.FPS
         current_timer = int((self.req_time) * 1000)
         self.lineEdit_tfpsT.setTime(self.req_time)
+
         if self.timer_value != current_timer:
             self.timer.stop()
             self.timer.start(current_timer)
@@ -524,15 +552,18 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
     # pause_button is through a lambda function.
 
     def reset_button(self):
-        pass
+        # you could also take a set of parameters here that set every slider to zero, but why would you
+        # this will just return it to the basic configuarion
+        self.para_loader()
 
+    #
     #
     #
     #
     # $$$$$$ functions related to dicom manager
     def filebrowse_dcm(self):
-        # this could definitely be done different, too bad!
-        #
+        # filebrowse_dcm served as the basis for the other filebrowser. It is responsible for opening a window
+        # for folder selection of the 'soon to be' png files.
         path = str(QtWidgets.QFileDialog.getExistingDirectory(MainWindow, 'select folder'))
         try:
             self.lineEdit_dicom.setText(path)
@@ -542,9 +573,11 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             for element in filelist:
                 self.txtbox_dcmcont.append(element)
         except FileNotFoundError:
+            # catching the error you get when you don't select a folder.
             self.txtbox_cmd.append("folder selection aborted")
 
     def convert(self):
+        # convert handles the conversion of dicom images to PNG, and eventually a full avi.
         self.txtbox_cmd.append("starting conversion")
         skip2video = 0
         # get variables
@@ -567,6 +600,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             return
         self.txtbox_cmd.append("FPS =" + str(self.spinbox_fps.value()))
 
+        # event handling regarding user input
         if project_name == "" or dcmpath == "":
             msg = QtWidgets.QMessageBox()
             msg.setText("Project name & dcm folder cant be empty")
@@ -582,6 +616,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
                 msg.setStandardButtons(
                     QtWidgets.QMessageBox.Yes | QtWidgets.QMessageBox.No | QtWidgets.QMessageBox.Cancel)
                 msg.exec_()
+                # depending on which button is pressed, an action is taken
                 bresult = (msg.clickedButton().text())
                 if bresult == "&No":
                     self.txtbox_cmd.append("overwrite detected, exiting")
@@ -603,6 +638,8 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
 
         path = dcmpath + "/"
         if skip2video == 0:
+            # initializing multithreading to prevent the GUI from freezing up while conversion is ongoing
+            # depending on the different signals that are sent by the dcm2pngworker, actions are performed
             self.threadpool.start(lambda a=filelist, b=path, c=project_name: dcm2pngworker.dicom2png(a, b, c))
             dcm2pngworker.signals.progress.connect(lambda prgz: self.txtbox_cmd.append("Converting image " + str(prgz)))
             dcm2pngworker.signals.finished.connect(lambda: self.txtbox_cmd.append("image conversion done"))
@@ -617,7 +654,6 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
 
 
 if __name__ == "__main__":
-    # chad no argument vs virgin sys.argv
     app = QtWidgets.QApplication(sys.argv)
     # sshFile = "./QT_Gui/Combinear.qss"
     sshFile = "./QT_Gui/Dtor.qss"
@@ -627,5 +663,4 @@ if __name__ == "__main__":
     MainWindow = QtWidgets.QMainWindow()
     ui = BuildUp()
     MainWindow.show()
-
     sys.exit(app.exec_())

@@ -5,16 +5,15 @@ import matplotlib.pyplot as plt
 from PyQt5 import QtWidgets
 
 """
-functions used in the dicom-editor
+functions used in the dicom-editor/file loader
 """
 
 
 def png2avi(path: str, fps: int) -> None:
-    # them ting be needing PNG
+    """Create a list of the PNG's in path, use cv2 videowriter to make it into a movie."""
     filelist = os.listdir(path)
     filelist.sort()
     img_array = []
-    # pre define to stop pycharm from whining
     size = (0, 0)
 
     for element in filelist:
@@ -33,11 +32,13 @@ def png2avi(path: str, fps: int) -> None:
         for i in range(len(img_array)):
             out.write(img_array[i])
         out.release()
-    # fourcc: Een FourCC is een reeks van vier bytes gebruikt om dataformaten te identificeren.
+    # fourcc: 4 bytes to identify videostreams.
     return
 
 
 def dicom2png(filelist: list, path: str, project_name: str) -> int:
+    """"extracts the png part out of the dicom images.
+    File should start with 'IM_' """
     a = 0
     for element in filelist:
         a = a + 1
@@ -57,6 +58,7 @@ def dicom2png(filelist: list, path: str, project_name: str) -> int:
 
 
 def checkifpng(filelist: list) -> int:
+    # count how many pngs are in the filelist.
     a = 0
     for element in filelist:
         if ".png" in element:
@@ -65,6 +67,8 @@ def checkifpng(filelist: list) -> int:
 
 
 def popupmsg(text: str, iswhat: str):
+    """"create a popup message. Can be generalized to do more than warnings
+    currently supports only warning"""
     msg = QtWidgets.QMessageBox()
     msg.setText(text)
     if iswhat == "warning":
@@ -87,6 +91,3 @@ def loadin(filelist: list, path: str, size: list) -> list:
         # im = im[58:428, 143:513]
         imlist.append(im)
     return imlist
-
-
-

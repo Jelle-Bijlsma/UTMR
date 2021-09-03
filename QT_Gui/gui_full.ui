@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1525</width>
-    <height>1260</height>
+    <width>1660</width>
+    <height>1280</height>
    </rect>
   </property>
   <property name="focusPolicy">
@@ -34,15 +34,15 @@
         <rect>
          <x>0</x>
          <y>0</y>
-         <width>1529</width>
-         <height>1147</height>
+         <width>1640</width>
+         <height>1181</height>
         </rect>
        </property>
        <layout class="QGridLayout" name="gridLayout_6">
         <item row="3" column="2">
          <widget class="QStackedWidget" name="stackedWidget">
           <property name="currentIndex">
-           <number>0</number>
+           <number>1</number>
           </property>
           <widget class="QWidget" name="homepage">
            <layout class="QGridLayout" name="gridLayout_18">
@@ -2240,7 +2240,7 @@
                </sizepolicy>
               </property>
               <property name="text">
-               <string>./data/parameters/params.txt</string>
+               <string>./data/parameters/parameters.pcl</string>
               </property>
              </widget>
             </item>
@@ -3317,7 +3317,7 @@
                </sizepolicy>
               </property>
               <property name="currentIndex">
-               <number>1</number>
+               <number>6</number>
               </property>
               <widget class="QWidget" name="tab">
                <attribute name="title">
@@ -6143,7 +6143,7 @@ p, li { white-space: pre-wrap; }
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1525</width>
+     <width>1660</width>
      <height>22</height>
     </rect>
    </property>

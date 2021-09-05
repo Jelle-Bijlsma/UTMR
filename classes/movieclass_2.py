@@ -80,7 +80,7 @@ class MovieUpdate:
         # the value of the dict key is the evaluation of the given function
         self.parameters[key] = fun()
 
-    def update(self, morph_vars, segment_state, timer_list):
+    def update(self, morph_vars, segment_state, timer_list,templates):
         """"
         This is the place where 'all the action is' regarding the image manipulation.
         """
@@ -131,17 +131,8 @@ class MovieUpdate:
         mask, masked = edge.flood(morph_img, base_image, segment_state)
         seg_t.stop(mode='avg', cutoff=5)
 
-        cqpx_t.start()
-        #              0                    1              2            3               4
-        output[0] = [cqpx(base_image), cqpx(gls_image), histogram, cqpx(self.b_filter), cqpx(filtered_image2),
-                     #              5                    6              7                8
-                     cqpx(filterf.prep_fft(fourier)), cqpx(self.g_filter), cqpx(edge_found), cqpx(morph_img),
-                     #   9           10
-                     cqpx(mask), cqpx(masked)]
-        cqpx_t.stop(mode='avg', cutoff=5)
-
         # Now we do everything again........
-        gls_image, histogram = process.calc_gls(masked, para['GLS2'])
+        gls_image2, histogram2 = process.calc_gls(masked, para['GLS2'])
 
         if self.prevpar2 == [para['b_filter2'], para['g_filter2']]:
             pass
@@ -152,23 +143,23 @@ class MovieUpdate:
 
         # 'fourier' is raw complex128.
         # para['b_filter'] is only needed for the checkbox
-        filtered_image1, fourier, = filterf.apply_filter(parameters=para['b_filter2'], filterz=self.b_filter2,
-                                                         image=gls_image)
-        filtered_image2, fourier, = filterf.apply_filter(parameters=para['g_filter2'], filterz=self.g_filter2,
-                                                         image=filtered_image1)
+        filtered_image12, fourier2, = filterf.apply_filter(parameters=para['b_filter2'], filterz=self.b_filter2,
+                                                         image=gls_image2)
+        filtered_image22, fourier2, = filterf.apply_filter(parameters=para['g_filter2'], filterz=self.g_filter2,
+                                                         image=filtered_image12)
 
         # call 2 edge function, to determine wheter canny or sobel is used...
-        edge_found, self.edge_status = edge.edge_call(filtered_image2, para['canny2'], para['sobel2'])
-        no_edgefinding = not (para['canny2'][0] or para['sobel2'])
+        edge_found2, self.edge_status2 = edge.edge_call(filtered_image22, para['canny2'], para['sobel2'])
+        no_edgefinding2 = not (para['canny2'][0] or para['sobel2'])
 
         morph_vars2 = [morph_vars[0][1], morph_vars[1], morph_vars[2]]
-        morph_img = edge.do_morph(edge_found, morph_vars2, no_edgefinding)
+        morph_img2 = edge.do_morph(edge_found2, morph_vars2, no_edgefinding2)
 
         # circle finding
-        circle_im = tpm.circlefind(para['circlefinder'], morph_img)
+        circle_im2 = tpm.circlefind(para['circlefinder'], morph_img2)
 
         tm_t.start()
-        template, tlist = tpm.templatematch(morph_img, para['template'], self.template_list)
+        template, tlist = tpm.templatematch(morph_img2, para['template'], templates)
         tm_t.stop(mode='avg', cutoff=5)
 
         sort_t.start()
@@ -193,11 +184,21 @@ class MovieUpdate:
         cutout, angles = lf.takelines(para['linefinder'], spline_coords, mask)
         lf_t.stop(mode='avg', cutoff=5)
 
-        #               0               1           2                         3
-        output[1] = [cqpx(gls_image), histogram, cqpx(self.b_filter), cqpx(filtered_image2),
-                     #          4                          5                 6                  7
+        cqpx_t.start()
+        #              0                    1              2            3               4
+        output[0] = [cqpx(base_image), cqpx(gls_image), histogram, cqpx(self.b_filter), cqpx(filtered_image2),
+                     #              5                    6                      7                8
                      cqpx(filterf.prep_fft(fourier)), cqpx(self.g_filter), cqpx(edge_found), cqpx(morph_img),
-                     #       8               9          10           11       12               13
-                     cqpx(circle_im), cqpx(template), cqpx(cutout), angles, distances, cqpx(spline_im)]
+                     #   9           10
+                     cqpx(mask), cqpx(masked)]
 
+
+        #               0               1           2                         3
+        output[1] = [cqpx(gls_image2), histogram, cqpx(self.b_filter2), cqpx(filtered_image22),
+                     #          4                          5                 6                  7
+                     cqpx(filterf.prep_fft(fourier2)), cqpx(self.g_filter2), cqpx(edge_found2), cqpx(morph_img2),
+                     #       8               9          10           11       12               13
+                     cqpx(circle_im2), cqpx(template), cqpx(cutout), angles, distances, cqpx(spline_im)]
+
+        cqpx_t.stop(mode='avg', cutoff=5)
         return output

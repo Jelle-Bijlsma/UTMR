@@ -70,6 +70,8 @@ def templatematch(img, parameters, template_list):
     coord_list = []
 
     for template in template_list:
+        if template is None:
+            continue
         # Save the x,y coordinates (CENTRE) of each template in a list
         w, h = template.shape
         w2 = int(round(w/2))

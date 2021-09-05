@@ -14,6 +14,8 @@ import sys
 import os
 import time
 import warnings
+
+import cv2
 import numpy as np
 
 # classes related to PyQT GUI
@@ -28,6 +30,7 @@ import functions.auxiliary  # functions for DICOM editor
 from QT_Gui import gui_full  # the actual GUI file
 from classes.class_extra import SliderClass as SliderClass  # too complex for short description (see file)
 import classes.class_addition  # Extends the LineEdit class
+from functions.process import change_qpix as cqpx
 
 
 class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
@@ -58,6 +61,11 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.past_10 = np.zeros(10)
         self.update_call = 0
         self.req_time = 0
+
+        # template match
+        self.template_point = 0
+        self.slice_select = [(0, 0), (0, 0)]
+        self.templates = [None, None, None, None]
 
         # morphological operations are not entirely done by the movieclass due to their interaction with
         # the user interface, that is why some options are initialized here.
@@ -180,6 +188,20 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.pb_pause.clicked.connect(lambda: self.timer.stop())
         self.pb_save_params.clicked.connect(self.para_saver)
         self.pb_load_params.clicked.connect(self.para_loader)
+        self.tabWidget.currentChanged.connect(self.update_all_things)
+        # template match
+        self.pb_select1.clicked.connect(lambda: self.display_tm(0))
+        self.pb_select2.clicked.connect(lambda: self.display_tm(1))
+        self.pb_select3.clicked.connect(lambda: self.display_tm(2))
+        self.pb_select4.clicked.connect(lambda: self.display_tm(3))
+        self.pb_save_temp.clicked.connect(self.save_temp)
+        self.pb_load_temp.clicked.connect(self.load_temp)
+        self.pb_save1.clicked.connect(lambda: self.delete_temp(0))
+        self.pb_save2.clicked.connect(lambda: self.delete_temp(1))
+        self.pb_save3.clicked.connect(lambda: self.delete_temp(2))
+        self.pb_save4.clicked.connect(lambda: self.delete_temp(3))
+
+
 
         # dicom page
         self.pb_convert.clicked.connect(self.convert)
@@ -252,7 +274,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         if stdpath is True:
             path = self.lineEdit_params.text()
         else:
-            path = "./data/parameters/parameters.pcl"
+            path = "./data/parameters/parameters_2.pcl"
 
         file = open(path, 'rb')
         loaded_p_list = pickle.load(file)
@@ -314,12 +336,12 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             return
 
         a = QtWidgets.QFileDialog()
-        a.setDirectory("./data/png/")  #std directory
+        a.setDirectory("./data/png/")  # std directory
 
         if test is False:
             path = str(a.getExistingDirectory(MainWindow, 'select folder with pngs'))
         else:
-            path = "/home/jelle/PycharmProjects/UTMR/data/png/0313_stationary"
+            path = "/home/jelle/PycharmProjects/UTMR/data/png/mri31"
         # 'get existing directory' never uses the final '/' so you have to manually input it.
         self.lineEdit_importpath.setText(path)
         filelist = os.listdir(path)
@@ -332,7 +354,11 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.pb_play.setEnabled(True)
         self.pb_play.setToolTip("")
 
-        cropsize = [58, 428, 243, 413]  # im = im[58:428, 143:513]
+
+
+        #cropsize = [70, 400, 243, 413]  # im = im[58:428, 143:513
+        cropsize = [58, 428, 270, 390]  # im = im[58:428, 143:513]
+        #>>>> cropsize = [58, 428, 243, 413]  # im = im[58:428, 143:513]
         self.imlist = functions.auxiliary.loadin(filelist, path, size=cropsize)
         self.CurMov.get_imlist(imlist=self.imlist)
         self.progress_bar.setMaximum(self.CurMov.maxframes)
@@ -385,42 +411,50 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
                       self.lineEdit_segT, self.lineEdit_lfT, self.lineEdit_cqpx, self.lineEdit_tmT,
                       self.lineEdit_sortT, self.lineEdit_drawT, self.lineEdit_spl1T, self.lineEdit_spl2T]
 
-        # CurMov.update() does all the image processing
+        # CurMov.update() does all the imagge processing
         self.lineEdit_sumT.start()
-        output = self.CurMov.update(morph_vars, segment_state, timer_list)
+        output = self.CurMov.update(morph_vars, segment_state, timer_list,self.templates)
         self.lineEdit_sumT.stop()
+
+        self.base_image = output[0][0]
 
         # now all the acquired images from CurMov.update() are displayed
         self.lineEdit_dispT.start()
+
+        cindex = self.tabWidget.currentIndex()
+        #print(cindex)
+
         if self.radioButton_image.isChecked():
+            self.filter_image1.setPixmap(output[0][3])
+            self.filter_image2.setPixmap(output[0][6])
+            # side pictures 1-4
             self.histogram.clear()
             self.histogram.addItem(pg.BarGraphItem(x=self.histogramx, height=output[0][2], width=5, brush='g'))
-            self.filter_image1.setPixmap(output[0][3])
-            self.label_qim_tester.setPixmap(output[0][4])
             self.fourier_image.setPixmap(output[0][5])
-            self.filter_image_g.setPixmap(output[0][6])
-            self.label_mask_im.setPixmap(output[0][9])
-            self.mr_image.setPixmap(output[0][10])
+            self.label_sidepic3.setPixmap(output[0][10])  # masked image
+            self.label_sidepic4.setPixmap(output[0][9])  # mask
+            # Big pictures
+            self.mr_image.setPixmap(output[0][8])  # morphed image
+            self.mr_image_2.setPixmap(output[0][functions.auxiliary.check_index(cindex,1)])  # active window
         else:
+            self.filter_image1.setPixmap(output[1][2])
+            self.filter_image2.setPixmap(output[1][5])
+            # side pictures 1-4
             self.histogram.clear()
             self.histogram.addItem(pg.BarGraphItem(x=self.histogramx, height=output[1][1], width=5, brush='g'))
-            self.filter_image1.setPixmap(output[1][2])
-            self.label_qim_tester.setPixmap(output[1][10])
-            self.mr_image.setPixmap(output[1][13])
-            self.filter_image_g.setPixmap(output[1][5])
-            self.label_mask_im.setPixmap(output[0][9])
-            if self.checkBox_template.isChecked():
-                self.fourier_image.setPixmap(output[1][9])
-            else:
-                self.fourier_image.setPixmap(output[1][8])
+            self.fourier_image.setPixmap(output[1][4])
+            self.label_sidepic3.clear()  # masked image
+            self.label_sidepic4.clear()  # mask
+            # Big pictures
+            self.mr_image.setPixmap(output[1][10])  # morphed image
+            self.mr_image_2.setPixmap(output[1][functions.auxiliary.check_index(cindex,2)])  # active window
 
-        if output[1][11]:
-            self.lineEdit_tip_a.setText(str(round(output[1][11][0])))
-            self.lineEdit_wall_a.setText(str(round(output[1][11][1])))
-        if output[1][12]:
-            self.lineEdit_tip_wall.setText(str(output[1][12][0]))
-            self.lineEdit_closest.setText(str(min(output[1][12])))
-        self.mr_image_2.setPixmap(output[0][0])
+        # if output[1][11]:
+        #     self.lineEdit_tip_a.setText(str(round(output[1][11][0])))
+        #     self.lineEdit_wall_a.setText(str(round(output[1][11][1])))
+        # if output[1][12]:
+        #     self.lineEdit_tip_wall.setText(str(output[1][12][0]))
+        #     self.lineEdit_closest.setText(str(min(output[1][12])))
 
         # timing related
         self.lineEdit_dispT.stop(mode='avg')
@@ -527,14 +561,78 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         y = int((y / ytot) * h)
         print(f"rescaled x = {x}, rescaled y = {y}")
         coords = f"x:{x}, y:{y}"
-        self.coords = (x, y)
-        self.lineEdit_coords.setText(coords)
+        ctab = self.tabWidget.currentWidget().objectName()
+        if ctab == "segmentation":
+            self.coords = (x, y)
+            self.lineEdit_coords.setText(coords)
+            return None
+        if ctab == "tab_template":
+            self.slice_select[self.template_point] = (x, y)
+
+            if self.template_point == 0:
+                self.template_point = 1
+            else:
+                self.template_point = 0
+
+            #print(self.slice_select)
+
+    def display_tm(self, index):
+        obj_list = [self.label_temp1, self.label_temp2, self.label_temp3, self.label_temp4]
+
+        x1 = self.slice_select[0][0]
+        y1 = self.slice_select[0][1]
+        x2 = self.slice_select[1][0]
+        y2 = self.slice_select[1][1]
+
+        cutout = self.CurMov.currentframe[y1:y2, x1:x2]
+        my_image = cqpx(cutout)
+        self.templates[index] = cutout
+        my_image_scaled = my_image.scaled(150, 150)
+        obj_list[index].setPixmap(my_image_scaled)
+
+    def save_temp(self):
+        # path = './data/templates/manual/'
+        path: str = self.lineEdit_save_t.text()
+        try:
+            os.mkdir(path)
+        except FileExistsError:
+            pass
+        counter = 0
+        for file in self.templates:
+            if file is None:
+                continue
+            cv2.imwrite(path + "template_" + str(counter) + ".png", file)
+            counter += 1
+
+    def load_temp(self):
+        obj_list = [self.label_temp1, self.label_temp2, self.label_temp3, self.label_temp4]
+        path = self.lineEdit_load_t.text()
+        elements = os.listdir(path)
+        if len(elements) > 4:
+            raise FileExistsError("Too many templates in folder. MAX = 4")
+        elif len(elements) == 0:
+            raise FileNotFoundError("No files in folder, check path")
+        counter = 0
+        if path[-1] != '/':         # should do this check more often.
+            path += '/'
+        for file in elements:
+            self.templates[counter] = cv2.imread(path + file,0)
+            my_image = cqpx(self.templates[counter])
+            my_image_scaled = my_image.scaled(150, 150)
+            obj_list[counter].setPixmap(my_image_scaled)
+            counter += 1
+
+    def delete_temp(self,index):
+        obj_list = [self.label_temp1, self.label_temp2, self.label_temp3, self.label_temp4]
+        self.templates[index] = None
+        obj_list[index].clear()
+
 
     def play_button(self):
         # extra math for just the play button to determine what the current FPS is and how much time it needs
         self.FPS = self.spinBox_FPS.value()
         self.req_time = 1 / self.FPS
-        current_timer = int((self.req_time) * 1000)
+        current_timer = int(self.req_time * 1000)
         self.lineEdit_tfpsT.setTime(self.req_time)
 
         if self.timer_value != current_timer:

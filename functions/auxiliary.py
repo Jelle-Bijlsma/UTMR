@@ -8,6 +8,35 @@ from PyQt5 import QtWidgets
 functions used in the dicom-editor/file loader
 """
 
+def check_index(index,radio):
+    # function uses index to check which output result should be presented to the user
+    # instead of index should use the name of the tab
+    if radio == 1:
+        if index == 0:
+            return 1
+        if index == 1:
+            return 4
+        if index == 2:
+            return 7
+        if index == 3:
+            return 8
+        else:
+            return 0
+    elif radio == 2:
+        if index == 0:  # GLS
+            return 0
+        if index == 1:  # filter
+            return 3
+        if index == 2:  # edge
+            return 6
+        if index == 3:  # morph
+            return 7
+        if index == 4:  # segment but shows GLS
+            return 0
+        if index == 5:  # template
+            return 9
+        else:
+            return 0
 
 def png2avi(path: str, fps: int) -> None:
     """Create a list of the PNG's in path, use cv2 videowriter to make it into a movie."""

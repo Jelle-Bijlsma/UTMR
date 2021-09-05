@@ -247,8 +247,12 @@ def dist_determine(point,mask):
         points[11] = (sq+xcent,-h+ycent)
 
         for ii in range(11):
+            #print(f"range = {r}")
             # gotta switch em w.r.t. array!
-            if mask[(points[ii][1],points[ii][0])] == 255:
-                return points[ii],r
+            try:
+                if mask[(points[ii][1],points[ii][0])] == 255:
+                    return points[ii],r
+            except IndexError:
+                print(points[ii][0],points[ii][1],r)
 
     return [], []

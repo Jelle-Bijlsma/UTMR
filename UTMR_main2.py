@@ -192,7 +192,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.spinBox_FPS.valueChanged.connect(self.play_button)
         self.pb_pause.clicked.connect(lambda: self.timer.stop())
         self.pb_save_params.clicked.connect(self.para_saver)
-        self.pb_load_params.clicked.connect(self.para_loader)
+        self.pb_load_params.clicked.connect(lambda: self.para_loader(stdpath=True))
         self.tabWidget.currentChanged.connect(self.update_all_things)
         # template match
         self.pb_select1.clicked.connect(lambda: self.display_tm(0))
@@ -278,6 +278,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
                 para2 = clazz._params_circle
                 para_list.append(para2)
         # manually add the morph state, since it is no slider class yet they are parameters
+        print(f"morph_state is {self.morph_state}")
         para_list.append(self.morph_state)
         para_list.append(self.coords)
         para_list.append(self.checkBox_segment.isChecked())

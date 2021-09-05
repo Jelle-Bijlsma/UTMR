@@ -35,6 +35,8 @@ def check_index(index,radio):
             return 0
         if index == 5:  # template
             return 9
+        if index == 7:
+            return 13
         else:
             return 0
 

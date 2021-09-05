@@ -3,7 +3,7 @@ import pickle
 option = "load"
 # option = "write"
 
-path = "../data/parameters/para1.txt"
+path = "../scrapyard/scrap/para1.txt"
 mylist = ["hi", 12, {"key": 420}, ['a','b']]
 
 if option == "write":

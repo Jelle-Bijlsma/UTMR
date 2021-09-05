@@ -3317,41 +3317,95 @@
                </sizepolicy>
               </property>
               <property name="currentIndex">
-               <number>4</number>
+               <number>0</number>
               </property>
-              <widget class="QWidget" name="tab">
+              <widget class="QWidget" name="GLS">
                <attribute name="title">
                 <string>GLS</string>
                </attribute>
                <layout class="QGridLayout" name="gridLayout_14">
-                <item row="2" column="0">
-                 <widget class="QLabel" name="label_32">
-                  <property name="text">
-                   <string>x</string>
+                <item row="3" column="2" colspan="2">
+                 <widget class="QSlider" name="horizontalSlider_x2">
+                  <property name="maximum">
+                   <number>300</number>
+                  </property>
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
                   </property>
                  </widget>
                 </item>
-                <item row="9" column="3">
+                <item row="2" column="0">
+                 <widget class="QLabel" name="label_32">
+                  <property name="text">
+                   <string>xl</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="10" column="3">
                  <widget class="QLabel" name="label_Rbound">
                   <property name="text">
                    <string>Rbound</string>
                   </property>
                  </widget>
                 </item>
-                <item row="9" column="2">
+                <item row="6" column="1">
+                 <widget class="QPushButton" name="pushButton_apply_cut">
+                  <property name="text">
+                   <string>apply</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="2" column="2" colspan="2">
+                 <widget class="QSlider" name="horizontalSlider_x1">
+                  <property name="maximum">
+                   <number>300</number>
+                  </property>
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                 </widget>
+                </item>
+                <item row="4" column="2" colspan="2">
+                 <widget class="QSlider" name="horizontalSlider_y1">
+                  <property name="maximum">
+                   <number>200</number>
+                  </property>
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                 </widget>
+                </item>
+                <item row="10" column="2">
                  <widget class="QLabel" name="label_Lbound">
                   <property name="text">
                    <string>Lbound</string>
                   </property>
                  </widget>
                 </item>
-                <item row="10" column="3">
+                <item row="11" column="3">
                  <widget class="QLineEdit" name="lineEdit_Rbound"/>
                 </item>
-                <item row="10" column="0">
+                <item row="11" column="0">
                  <widget class="QLineEdit" name="lineEdit_Brightness"/>
                 </item>
-                <item row="7" column="0" colspan="2">
+                <item row="5" column="2" colspan="2">
+                 <widget class="QSlider" name="horizontalSlider_y2">
+                  <property name="maximum">
+                   <number>200</number>
+                  </property>
+                  <property name="orientation">
+                   <enum>Qt::Horizontal</enum>
+                  </property>
+                 </widget>
+                </item>
+                <item row="5" column="0">
+                 <widget class="QLabel" name="label_57">
+                  <property name="text">
+                   <string>yb</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="8" column="0" colspan="2">
                  <widget class="QLabel" name="tab1_title">
                   <property name="font">
                    <font>
@@ -3364,7 +3418,24 @@
                   </property>
                  </widget>
                 </item>
-                <item row="8" column="0">
+                <item row="2" column="1">
+                 <widget class="QLineEdit" name="lineEdit_x1">
+                  <property name="text">
+                   <string>8</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="4" column="1">
+                 <widget class="QLineEdit" name="lineEdit_y1"/>
+                </item>
+                <item row="3" column="0">
+                 <widget class="QLabel" name="label_52">
+                  <property name="text">
+                   <string>xr</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="9" column="0">
                  <widget class="QSlider" name="slider_brightness">
                   <property name="minimum">
                    <number>-255</number>
@@ -3377,7 +3448,7 @@
                   </property>
                  </widget>
                 </item>
-                <item row="8" column="3">
+                <item row="9" column="3">
                  <widget class="QSlider" name="slider_Rbound">
                   <property name="minimum">
                    <number>1</number>
@@ -3396,24 +3467,34 @@
                   </property>
                  </widget>
                 </item>
-                <item row="6" column="0" colspan="2">
+                <item row="7" column="0" colspan="2">
                  <widget class="Line" name="line_6">
                   <property name="orientation">
                    <enum>Qt::Horizontal</enum>
                   </property>
                  </widget>
                 </item>
-                <item row="10" column="2">
+                <item row="13" column="0">
+                 <widget class="QLabel" name="label_69">
+                  <property name="text">
+                   <string>apply histogram eq.</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="3" column="1">
+                 <widget class="QLineEdit" name="lineEdit_x2"/>
+                </item>
+                <item row="11" column="2">
                  <widget class="QLineEdit" name="lineEdit_Lbound"/>
                 </item>
-                <item row="5" column="0">
-                 <widget class="QCheckBox" name="checkBox">
+                <item row="6" column="0">
+                 <widget class="QCheckBox" name="checkBox_border">
                   <property name="text">
                    <string>White border</string>
                   </property>
                  </widget>
                 </item>
-                <item row="8" column="1">
+                <item row="9" column="1">
                  <widget class="QSlider" name="slider_boost">
                   <property name="minimum">
                    <number>-255</number>
@@ -3432,14 +3513,17 @@
                   </property>
                  </widget>
                 </item>
-                <item row="9" column="1">
+                <item row="5" column="1">
+                 <widget class="QLineEdit" name="lineEdit_y2"/>
+                </item>
+                <item row="10" column="1">
                  <widget class="QLabel" name="label_boost">
                   <property name="text">
                    <string>Boost</string>
                   </property>
                  </widget>
                 </item>
-                <item row="8" column="2">
+                <item row="9" column="2">
                  <widget class="QSlider" name="slider_Lbound">
                   <property name="maximum">
                    <number>254</number>
@@ -3469,7 +3553,7 @@
                   </property>
                  </widget>
                 </item>
-                <item row="9" column="0">
+                <item row="10" column="0">
                  <widget class="QLabel" name="label_brightness">
                   <property name="text">
                    <string>Brightness</string>
@@ -3483,27 +3567,27 @@
                   </property>
                  </widget>
                 </item>
-                <item row="10" column="1">
+                <item row="11" column="1">
                  <widget class="QLineEdit" name="lineEdit_Boost"/>
                 </item>
-                <item row="3" column="0">
+                <item row="4" column="0">
                  <widget class="QLabel" name="label_33">
                   <property name="text">
-                   <string>y</string>
+                   <string>yt</string>
                   </property>
                  </widget>
                 </item>
-                <item row="2" column="1" colspan="2">
-                 <widget class="QSlider" name="horizontalSlider">
+                <item row="12" column="0">
+                 <widget class="Line" name="line_7">
                   <property name="orientation">
                    <enum>Qt::Horizontal</enum>
                   </property>
                  </widget>
                 </item>
-                <item row="3" column="1" colspan="2">
-                 <widget class="QSlider" name="horizontalSlider_2">
-                  <property name="orientation">
-                   <enum>Qt::Horizontal</enum>
+                <item row="13" column="1">
+                 <widget class="QCheckBox" name="checkBox_heq">
+                  <property name="text">
+                   <string>CheckBox</string>
                   </property>
                  </widget>
                 </item>

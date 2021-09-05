@@ -120,3 +120,19 @@ def loadin(filelist: list, path: str, size: list) -> list:
         # im = im[58:428, 143:513]
         imlist.append(im)
     return imlist
+
+def loadpro(filelist,path,cropvals):
+    x1, x2, y1, y2 = cropvals
+    imlist = []
+    if path[-1] != '/':
+        path += '/'
+
+    for element in filelist:
+        impath = path+element
+        img = cv2.imread(impath,0)
+        h,w = img.shape
+        imgnew = img[y1:h - y2, x1:w - x2]
+        imlist.append(imgnew)
+
+    return imlist
+

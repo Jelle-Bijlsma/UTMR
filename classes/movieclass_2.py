@@ -80,7 +80,7 @@ class MovieUpdate:
         # the value of the dict key is the evaluation of the given function
         self.parameters[key] = fun()
 
-    def update(self, morph_vars, segment_state, timer_list,templates):
+    def update(self, morph_vars, segment_state, timer_list,templates,heq):
         """"
         This is the place where 'all the action is' regarding the image manipulation.
         """
@@ -94,24 +94,39 @@ class MovieUpdate:
         gls_t, pre_t, edge_t, morph_t, seg_t, lf_t, cqpx_t, tm_t, sort_t, draw_t, spl1_t, spl2_t = timer_list
         # transfer and unpack class instances (of QWidgets.QLineEdit) for usage of added methods for timing
 
+
         # by calling .start and .stop of the appropriate lineEdit, the performance of the piece of code can
         # be measured. Nanosecond possibility.
         gls_t.start(ns=False)
-        gls_image, histogram = process.calc_gls(base_image, para['GLS'])
+        self.gls_image, histogram = process.calc_gls(base_image, para['GLS'])
+        self.gls_image = 255-self.gls_image
+        if heq is True:
+            self.gls_image = cv2.equalizeHist(self.gls_image)
+            l, b = self.gls_image.shape
+            img2 = np.reshape(self.gls_image, l * b)
+            histogram = np.log10(np.bincount(img2, minlength=255) + 1)
+            print("didgls")
+
         gls_t.stop(mode='avg', ns=False, cutoff=5)
 
         pre_t.start()
-        if self.prevpar == [para['b_filter'], para['g_filter']]:
-            pass
-        else:
-            self.b_filter = filterf.b_filter(parameters=para['b_filter'], shape=np.shape(self.currentframe))
-            self.g_filter = filterf.g_filter(parameters=para['g_filter'], shape=np.shape(self.currentframe))
-            self.prevpar = [para['b_filter'], para['g_filter']]
+
+        """"
+        Due to the messed up way of doing the initial cropping, i cannot do the equalitiy check in the
+        filter parameters..  2 be fixed... 
+        """
+
+        # if self.prevpar == [para['b_filter'], para['g_filter']]:
+        #     pass
+        # else:
+        self.b_filter = filterf.b_filter(parameters=para['b_filter'], shape=np.shape(self.currentframe))
+        self.g_filter = filterf.g_filter(parameters=para['g_filter'], shape=np.shape(self.currentframe))
+        self.prevpar = [para['b_filter'], para['g_filter']]
 
         # 'fourier' is raw complex128.
         # para['b_filter'] is only needed for the checkbox
         filtered_image1, fourier, = filterf.apply_filter(parameters=para['b_filter'], filterz=self.b_filter,
-                                                         image=gls_image)
+                                                         image=self.gls_image)
         filtered_image2, fourier, = filterf.apply_filter(parameters=para['g_filter'], filterz=self.g_filter,
                                                          image=filtered_image1)
         pre_t.stop(mode='avg', cutoff=5)
@@ -134,12 +149,12 @@ class MovieUpdate:
         # Now we do everything again........
         gls_image2, histogram2 = process.calc_gls(masked, para['GLS2'])
 
-        if self.prevpar2 == [para['b_filter2'], para['g_filter2']]:
-            pass
-        else:
-            self.b_filter2 = filterf.b_filter(parameters=para['b_filter2'], shape=np.shape(self.currentframe))
-            self.g_filter2 = filterf.g_filter(parameters=para['g_filter2'], shape=np.shape(self.currentframe))
-            self.prevpar2 = [para['b_filter2'], para['g_filter2']]
+        # if self.prevpar2 == [para['b_filter2'], para['g_filter2']]:
+        #     pass
+        # else:
+        self.b_filter2 = filterf.b_filter(parameters=para['b_filter2'], shape=np.shape(self.currentframe))
+        self.g_filter2 = filterf.g_filter(parameters=para['g_filter2'], shape=np.shape(self.currentframe))
+        self.prevpar2 = [para['b_filter2'], para['g_filter2']]
 
         # 'fourier' is raw complex128.
         # para['b_filter'] is only needed for the checkbox
@@ -186,7 +201,7 @@ class MovieUpdate:
 
         cqpx_t.start()
         #              0                    1              2            3               4
-        output[0] = [cqpx(base_image), cqpx(gls_image), histogram, cqpx(self.b_filter), cqpx(filtered_image2),
+        output[0] = [cqpx(base_image), cqpx(self.gls_image), histogram, cqpx(self.b_filter), cqpx(filtered_image2),
                      #              5                    6                      7                8
                      cqpx(filterf.prep_fft(fourier)), cqpx(self.g_filter), cqpx(edge_found), cqpx(morph_img),
                      #   9           10

@@ -46,7 +46,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         # start initializing variables (not very interesting!)
         self.timer = QTimer()
         self.threadpool = QThreadPool()
-
+        self.internal_dict = {}
         self.CurMov = mvc2.MovieUpdate()
 
         self.FPS = self.spinBox_FPS.value()
@@ -146,6 +146,11 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.SC_lf = SliderClass(slides=sl_lf, line_edits=le_lf, function=self.pre_value_changed,
                                  keyword='linefinder', radiotuple=None, checklist=[self.checkBox_lf])
 
+        sl_cr = [self.horizontalSlider_x1,self.horizontalSlider_x2,self.horizontalSlider_y1,self.horizontalSlider_y2]
+        le_cr = [self.lineEdit_x1,self.lineEdit_x2,self.lineEdit_y1,self.lineEdit_y2]
+        self.SC_cr = SliderClass(slides=sl_cr,line_edits=le_cr,function=self.internal_value_changed,keyword='crop',
+                                 radiotuple=None)
+
         # this makes sure there are keys for the circle finding as well
         self.radioButton_circle.setChecked(True)
         for clazz in SliderClass.all_sliders:
@@ -229,9 +234,26 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         if testing is True:
             self.filebrowse_png(True)  # load in all images and go through update cycle
             self.para_loader(stdpath=False)
+            self.filebrowse_png(True)  # load in all images and go through update cycle
+
 
     """This was __init__. Now that this is done, we have created the entire event handling. All the functions
     following now, are mentioned in the previous section. """
+
+    def crop_trial(self):
+        x1,x2,y1,y2 = self.internal_dict['crop']
+        path = self.lineEdit_importpath.text()
+        if path[-1] != '/':
+            path += '/'
+        try:
+            imlist = os.listdir(path)
+            impath = path+imlist[0]
+            img = cv2.imread(impath,0)
+            h,w = img.shape
+            imgnew = img[y1:h-y2,x1:w-x2]
+            self.mr_image_2.setPixmap(cqpx(imgnew))
+        except FileNotFoundError:
+            print("crop_trial file not found")
 
     # $$$$$$$$  functions relating to video editor
     def para_saver(self):
@@ -274,7 +296,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         if stdpath is True:
             path = self.lineEdit_params.text()
         else:
-            path = "./data/parameters/parameters_2.pcl"
+            path = "./data/parameters/parameters.pcl"
 
         file = open(path, 'rb')
         loaded_p_list = pickle.load(file)
@@ -305,8 +327,10 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             except IndexError:
                 # again a small hack for when you add an extra element to the class and this is not yet implemented
                 # in your parameter saves.
-                warnings.warn("parameters are messed up! save new ones")
+                warnings.warn("parameters are messed up! save new ones (too few parameters)")
                 counter += 1
+            except TypeError:
+                warnings.warn("parameters are messed up! save new ones (too few classes)")
         print(f"should be morph: {loaded_p_list[counter]}")
         # in the save, manually set the morph_state as the final thing to load in
         self.morph_state = loaded_p_list[counter]
@@ -355,11 +379,17 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.pb_play.setToolTip("")
 
 
-
         #cropsize = [70, 400, 243, 413]  # im = im[58:428, 143:513
-        cropsize = [58, 428, 270, 390]  # im = im[58:428, 143:513]
+        # this should be redefined .. it doesnt need to crop initially, but
+        # short on time + wanting to finish features = weird code
+        if self.internal_dict['crop'] == [0,0,0,0]:
+            cropsize = [58, 428, 270, 390]  # im = im[58:428, 143:513]
+            self.imlist = functions.auxiliary.loadin(filelist, path, size=cropsize)
+            print("run")
+        else:
+            self.imlist = functions.auxiliary.loadpro(filelist,path,self.internal_dict['crop'])
         #>>>> cropsize = [58, 428, 243, 413]  # im = im[58:428, 143:513]
-        self.imlist = functions.auxiliary.loadin(filelist, path, size=cropsize)
+
         self.CurMov.get_imlist(imlist=self.imlist)
         self.progress_bar.setMaximum(self.CurMov.maxframes)
         self.update_all_things()
@@ -377,6 +407,12 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             self.progress_bar.setValue(self.CurMov.frame_number)  # edit the progress bar
 
         # don't call update_all here. it is already done by the moving progress bar.
+
+    def internal_value_changed(self,key,fun):
+        key_proper = "".join(key)  # do this since key is a list ['keyval'] and u want: 'keyval'
+        self.internal_dict[key_proper] = fun()
+        if key_proper == 'crop':
+            self.crop_trial()
 
     def pre_value_changed(self, key, fun):
         self.CurMov.value_changed(key, fun)
@@ -413,7 +449,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
 
         # CurMov.update() does all the imagge processing
         self.lineEdit_sumT.start()
-        output = self.CurMov.update(morph_vars, segment_state, timer_list,self.templates)
+        output = self.CurMov.update(morph_vars, segment_state, timer_list,self.templates,self.checkBox_heq.isChecked())
         self.lineEdit_sumT.stop()
 
         self.base_image = output[0][0]
@@ -431,7 +467,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             self.histogram.clear()
             self.histogram.addItem(pg.BarGraphItem(x=self.histogramx, height=output[0][2], width=5, brush='g'))
             self.fourier_image.setPixmap(output[0][5])
-            self.label_sidepic3.setPixmap(output[0][10])  # masked image
+            self.label_sidepic3.setPixmap(output[0][0])  # masked image
             self.label_sidepic4.setPixmap(output[0][9])  # mask
             # Big pictures
             self.mr_image.setPixmap(output[0][8])  # morphed image
@@ -573,7 +609,9 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
                 self.template_point = 1
             else:
                 self.template_point = 0
-
+        if ctab == "GLS":
+            val = self.CurMov.gls_image[y,x]
+            print(f"this value is {val}")
             #print(self.slice_select)
 
     def display_tm(self, index):

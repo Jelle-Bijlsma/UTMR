@@ -252,7 +252,8 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         if stdpath is True:
             path = self.lineEdit_params.text()
         else:
-            path = "./data/parameters/parameters.pcl"
+            path = "./data/parameters/parameters_blur.pcl"
+            self.lineEdit_params.setText(path)
 
         file = open(path, 'rb')
         loaded_p_list = pickle.load(file)
@@ -319,7 +320,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         if test is False:
             path = str(a.getExistingDirectory(MainWindow, 'select folder with pngs'))
         else:
-            path = "/home/jelle/PycharmProjects/UTMR/data/png/0313_stationary"
+            path = "/home/jelle/PycharmProjects/UTMR/data/png/0315_moving_blur"
         # 'get existing directory' never uses the final '/' so you have to manually input it.
         self.lineEdit_importpath.setText(path)
         filelist = os.listdir(path)

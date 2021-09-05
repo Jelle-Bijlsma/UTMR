@@ -1,20 +1,19 @@
 import os
 import sys
 
+from PyQt5.QtCore import QTimer, QThreadPool
+from PyQt5.QtGui import QPixmap, QColor
+from PyQt5 import QtWidgets
 import pyqtgraph as pg
-from PyQt5 import QtCore, QtGui, QtWidgets
 
 import classes.class_extra
-import classes.class_frameclass
-import classes.class_movieclass
+import scrapyard.class_frameclass
+import scrapyard.class_movieclass
 import functions.auxiliary
-import functions.circle_tracking.circle_finder
+import scrapyard.circle_tracking.circle_finder
 from QT_Gui import gui_full
-from functions.image_processing.image_process import change_qpix as cqpx
-from functions.threed_projection import twod_movement as TwoDclass
-
-
-# import functions.morphology_code as morph
+from scrapyard.image_process import change_qpix as cqpx
+from prototype.threed_projection import twod_movement as TwoDclass
 
 
 # the whole thing is just existing within this class.
@@ -23,7 +22,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         super(BuildUp, self).__init__(parent)
         self.setupUi(MainWindow)
         # initialize timer video player. timer is started in the self.play_button
-        self.timer = QtCore.QTimer()
+        self.timer = QTimer()
         self.timer.timeout.connect(self.next_frame)
         self.coords = None
         # morph
@@ -36,11 +35,11 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         # variable too
         self.valid_ops = ["dilate", "erosion", "m_grad", "blackhat", "whitehat"]
 
-        self.threadpool = QtCore.QThreadPool()
+        self.threadpool = QThreadPool()
         # print("Multithreading with maximum %d threads" % self.threadpool.maxThreadCount())
 
         # start initializing variables
-        self.CurMov = classes.class_movieclass.MovieClass()
+        self.CurMov = scrapyard.class_movieclass.MovieClass()
         self.histogramx = list(range(0, 255))  # the x-range of the histogram
         self.bargraph = pg.BarGraphItem()  # the histogram widget inside plotwidget (which is called self.histogram)
         self.check_filter1.setChecked(1)
@@ -92,8 +91,8 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
                                                                self.edge_change, [self.checkBox_Canny])
 
         # load pictures in
-        self.mr_image.setPixmap(QtGui.QPixmap("./QT_Gui/images/baseimage.png"))
-        self.label_logo_uni.setPixmap((QtGui.QPixmap("./QT_Gui/images/UTlogo.png")))
+        self.mr_image.setPixmap(QPixmap("../QT_Gui/images/baseimage.png"))
+        self.label_logo_uni.setPixmap((QPixmap("../QT_Gui/images/UTlogo.png")))
         self.lineEdit_save.isEnabled()
 
         # self.stackedWidget.setCurrentIndex(0)  # initialize to homepage
@@ -191,7 +190,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         cv2.getStructuringElement uses a '0,1,2' notation for sq. rect. ellipse, thus the index of the
         dropdown menu corresponds to these.
         """
-        self.textEdit_morph.setTextColor(QtGui.QColor(0, 0, 0, 255))
+        self.textEdit_morph.setTextColor(QColor(0, 0, 0, 255))
         stringz += f" kernel: {self.spinBox.value()} shape: {self.comboBox.currentIndex()}"
         self.textEdit_morph.append(stringz)
 
@@ -222,8 +221,8 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         """
         errorcode = 0
         cursor_pos = 0
-        clrR = QtGui.QColor(255, 0, 0, 255)
-        clrB = QtGui.QColor(0, 0, 0, 255)
+        clrR = QColor(255, 0, 0, 255)
+        clrB = QColor(0, 0, 0, 255)
         cursor = self.textEdit_morph.textCursor()
 
         for element in self.textEdit_morph.toPlainText().split('\n'):
@@ -274,7 +273,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         if test is False:
             path = str(a.getExistingDirectory(MainWindow, 'select folder with pngs'))
         else:
-            path = "/home/jelle/PycharmProjects/UTMR/data/png/0313_stationary"
+            path = "/data/png/0313_stationary"
         # 'get existing directory' never uses the final '/' so you have to manually input it.
         self.lineEdit_importpath.setText(path)
         filelist = os.listdir(path)
@@ -478,10 +477,10 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
                     skip2video = 1
             else:
                 # you know this can be done easier
-                if os.path.exists("./data"):
+                if os.path.exists("../data"):
                     os.mkdir(projectpath)
                 else:
-                    os.mkdir("./data")
+                    os.mkdir("../data")
                     os.mkdir(projectpath)
 
         # initialize worker thread
@@ -505,7 +504,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
 
     # $$$$$$ functions related to circle finder
     def circle_newim(self):
-        self.circim = functions.circle_tracking.circle_finder.new()
+        self.circim = scrapyard.circle_tracking.circle_finder.new()
         self.label_imcircle.setPixmap(cqpx(self.circim))
         self.circle_find()
 
@@ -513,7 +512,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         if self.circim is None:
             self.circle_newim()
         parameters = self.My_circlefinder_slider.getvalue
-        img = functions.circle_tracking.circle_finder.update(self.circim, parameters)
+        img = scrapyard.circle_tracking.circle_finder.update(self.circim, parameters)
         self.label_imcircle.setPixmap(cqpx(img))
 
 

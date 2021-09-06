@@ -297,7 +297,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         if stdpath is True:
             path = self.lineEdit_params.text()
         else:
-            path = "./data/parameters/parameters.pcl"
+            path = "./data/parameters/parameters0131.pcl"
 
         file = open(path, 'rb')
         loaded_p_list = pickle.load(file)
@@ -480,11 +480,15 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             self.histogram.clear()
             self.histogram.addItem(pg.BarGraphItem(x=self.histogramx, height=output[1][1], width=5, brush='g'))
             self.fourier_image.setPixmap(output[1][4])
-            self.label_sidepic3.clear()  # masked image
+            self.label_sidepic3.setPixmap(output[0][0])  # base image
             self.label_sidepic4.clear()  # mask
             # Big pictures
-            self.mr_image.setPixmap(output[1][10])  # morphed image
-            self.mr_image_2.setPixmap(output[1][functions.auxiliary.check_index(cindex,2)])  # active window
+            # demo purposeses
+            #self.mr_image.setPixmap(output[1][10])  # morphed image
+            self.mr_image.setPixmap(cqpx(self.CurMov.currentframe))
+            self.label_sidepic3.setPixmap(output[1][10])
+            # self.mr_image_2.setPixmap(output[1][functions.auxiliary.check_index(cindex,2)])  # active window
+            self.mr_image_2.setPixmap(output[0][0])
 
         # if output[1][11]:
         #     self.lineEdit_tip_a.setText(str(round(output[1][11][0])))

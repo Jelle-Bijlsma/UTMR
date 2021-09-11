@@ -45,11 +45,15 @@ def get_spline(keypoints, image, parameters=None):
     conlist = []
 
     for point in keypoints:
-        vert_point = np.reshape(np.array(point), (2, 1))
-        new_point = M.dot(vert_point)
-        new_point[1] += w - 1
-        # you can do the dot if you extend vertpoint: [x,y,1]
-        conlist.append((int(new_point[0]), int(new_point[1])))
+        # vert_point = np.reshape(np.array(point), (2, 1))
+        # new_point = M.dot(vert_point)
+        # new_point[1] += w - 1
+        # # you can do the dot if you extend vertpoint: [x,y,1]
+        # conlist.append((int(new_point[0]), int(new_point[1])))
+
+        # # # watch this
+        conlist.append((int(point[1]), int(point[0])))
+
 
     # print(f"conlist: {conlist}")
     mysort = sorted(conlist, key=lambda p: p[0])
@@ -87,10 +91,11 @@ def get_spline(keypoints, image, parameters=None):
     # now we rotate the points again to their correct orientation.
 
     for point in thelist:
-        point = (*point, 1)
-        vert_point = np.reshape(np.array(point), (3, 1))
-        new_point = Ms.dot(vert_point)
-        thelist_new.append((int(new_point[0]), int(new_point[1])))
+        # point = (*point, 1)
+        # vert_point = np.reshape(np.array(point), (3, 1))
+        # new_point = Ms.dot(vert_point)
+        # thelist_new.append((int(new_point[0]), int(new_point[1])))
+        thelist_new.append((int(point[1]),int(point[0])))
 
     return thelist_new
 

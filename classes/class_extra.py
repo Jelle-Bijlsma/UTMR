@@ -112,6 +112,18 @@ def special_print(text, value):
 class SliderClass:
     all_sliders = []
 
+    """"
+    Sliderclass started out as a class method to automatically bind the valuechanged signal to the line-edit
+    'set.text' thing. Over the time, it became much more. It is able to facilitate parameter loading, and
+    also allows the lineedit to control the slider (by entering values) saving parameters, and include 
+    checkboxes in the parameterlist which is provided to CurMov for editing. 
+    
+    PRO TIP to whom it may concern:
+    Improve on the function by making the output of this function not a list, but a dictionary. But what key
+    to use? use 'QtWidgets.QSlider.objectName()' to set a key, such that the output is position independent
+    and get more flexibility in your code! 
+    """
+
     def __init__(self, slides, line_edits, function, keyword, radiotuple=None, checklist=None):
         self.__class__.all_sliders.append(self)
         """"
@@ -238,3 +250,55 @@ class SliderClass:
             self._params_image = vallist
 
         return vallist
+
+
+class ExtSliderClass(SliderClass):
+    """"
+    This class is made to extend the current sliderClass to accomodate sliders with minima and maxima.
+    The idea is that 'slides_min[a]' can not be greater than 'slides_max[a]' for a in 1:n where n is the
+    number of elements in slides_min, which is equal to slides_max.
+
+    Having a group which also contains some none 'min-max' combinations, we introduces the 'solo' group.
+    They behave like ordinary sliders.
+    """
+
+    def __init__(self, slides_min, slides_max, slide_solo, line_edits_min, line_edits_max, line_edit_solo,
+                 function, keyword, radiotuple=None, checklist=None):
+        self.slides_min: list = slides_min
+        self.slides_max: list = slides_max
+
+        self.minactive = False
+        self.maxactive = False
+
+        for element in slides_min:
+            element.valueChanged.connect(lambda: self.which_move(1))
+
+        for element in slides_max:
+            element.valueChanged.connect(lambda: self.which_move(2))
+
+        super().__init__(slides_min + slides_max + slide_solo, line_edits_min + line_edits_max + line_edit_solo,
+                         function, keyword, radiotuple, checklist)
+
+    def getvalue(self) -> list:
+        assert len(self.slides_min) == len(self.slides_max), "length not equal!"
+
+        for mini, maxi in zip(self.slides_min, self.slides_max):
+            lower = mini.value()
+            higher = maxi.value()
+            # print(lower)
+            # print(higher)
+            if (lower > higher) & self.minactive:
+                print("in here")
+                maxi.setValue(lower + 1)
+            elif (lower >= higher) & self.maxactive:
+                mini.setValue(higher - 1)
+
+        return super().getvalue()
+
+    def which_move(self, event):
+        if event == 1:
+            self.minactive = True
+            self.maxactive = False
+        if event == 2:
+            self.minactive = False
+            self.maxactive = True

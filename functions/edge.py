@@ -116,12 +116,12 @@ def flood(img, original, params):
         # print(f"h:{h}, w:{w}")
         mask = np.zeros((h + 2, w + 2), np.uint8)
         cv2.floodFill(after_fill, mask, (x, y), 255)
-        #mask = after_fill ^ before_fill
-        mask = after_fill
-        kernel = cv2.getStructuringElement(shape=0,ksize=(3,3))
-        mask = cv2.erode(mask,kernel,iterations=1)
-        kernel = cv2.getStructuringElement(shape=0,ksize=(4,1))
-        mask = cv2.erode(mask,kernel,iterations=1)
+        mask = after_fill ^ before_fill
+        #mask = after_fill
+        #kernel = cv2.getStructuringElement(shape=0,ksize=(3,3))
+        #mask = cv2.erode(mask,kernel,iterations=1)
+        #kernel = cv2.getStructuringElement(shape=0,ksize=(4,1))
+        #mask = cv2.erode(mask,kernel,iterations=1)
         masked = mask & original
 
         return mask, masked

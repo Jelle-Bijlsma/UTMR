@@ -29,6 +29,7 @@ import classes.movieclass_2 as mvc2  # responsible for all the vision/processing
 import functions.auxiliary  # functions for DICOM editor
 from QT_Gui import gui_full  # the actual GUI file
 from classes.class_extra import SliderClass as SliderClass  # too complex for short description (see file)
+from classes.class_extra import ExtSliderClass as SliderClassExt
 import classes.class_addition  # Extends the LineEdit class
 from functions.process import change_qpix as cqpx
 
@@ -146,10 +147,27 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.SC_lf = SliderClass(slides=sl_lf, line_edits=le_lf, function=self.pre_value_changed,
                                  keyword='linefinder', radiotuple=None, checklist=[self.checkBox_lf])
 
-        sl_cr = [self.horizontalSlider_x1,self.horizontalSlider_x2,self.horizontalSlider_y1,self.horizontalSlider_y2]
-        le_cr = [self.lineEdit_x1,self.lineEdit_x2,self.lineEdit_y1,self.lineEdit_y2]
-        self.SC_cr = SliderClass(slides=sl_cr,line_edits=le_cr,function=self.internal_value_changed,keyword='crop',
+        sl_cr = [self.horizontalSlider_x1, self.horizontalSlider_x2, self.horizontalSlider_y1, self.horizontalSlider_y2]
+        le_cr = [self.lineEdit_x1, self.lineEdit_x2, self.lineEdit_y1, self.lineEdit_y2]
+        self.SC_cr = SliderClass(slides=sl_cr, line_edits=le_cr, function=self.internal_value_changed, keyword='crop',
                                  radiotuple=None)
+        #                       1                   2                       3                   4
+        sl_min_blob = [self.slider_t_min,self.slider_inertia_min,self.slider_convex_min,self.slider_circ_min,
+                       self.slider_area_min]
+        #                       6                   7                   8                   9
+        sl_max_blob = [self.slider_t_max,self.slider_inertia_max,self.slider_convex_max,self.slider_circ_max,
+                       self.slider_area_max]
+        #               11
+        sl_blob = [self.slider_t_ss]
+        le_min_blob = [self.lineEdit_threshold_min,self.lineEdit_inertia_min,self.lineEdit_convex_min,
+                       self.lineEdit_circ_min,self.lineEdit_area_min]
+        le_max_blob = [self.lineEdit_threshold_max, self.lineEdit_inertia_max, self.lineEdit_convex_max,
+                       self.lineEdit_circ_max, self.lineEdit_area_max]
+        le_blob = [self.lineEdit_tss]
+
+        self.mysl = SliderClassExt(sl_min_blob, sl_max_blob, sl_blob, le_min_blob, le_max_blob, le_blob,
+                                   self.pre_value_changed, 'blob', radiotuple=None,
+                                   checklist=[self.checkBox_blob])
 
         # this makes sure there are keys for the circle finding as well
         self.radioButton_circle.setChecked(True)
@@ -206,7 +224,8 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.pb_save3.clicked.connect(lambda: self.delete_temp(2))
         self.pb_save4.clicked.connect(lambda: self.delete_temp(3))
 
-
+        # cut
+        self.pushButton_apply_cut.clicked.connect(lambda: self.filebrowse_png(test=True))
 
         # dicom page
         self.pb_convert.clicked.connect(self.convert)
@@ -233,24 +252,23 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
 
         if testing is True:
             self.filebrowse_png(True)  # load in all images and go through update cycle
-            self.para_loader(stdpath=False)
-            self.filebrowse_png(True)  # load in all images and go through update cycle
-
+            # self.para_loader(stdpath=False)
+            # self.filebrowse_png(True)  # load in all images and go through update cycle
 
     """This was __init__. Now that this is done, we have created the entire event handling. All the functions
     following now, are mentioned in the previous section. """
 
     def crop_trial(self):
-        x1,x2,y1,y2 = self.internal_dict['crop']
+        x1, x2, y1, y2 = self.internal_dict['crop']
         path = self.lineEdit_importpath.text()
         if path[-1] != '/':
             path += '/'
         try:
             imlist = os.listdir(path)
-            impath = path+imlist[0]
-            img = cv2.imread(impath,0)
-            h,w = img.shape
-            imgnew = img[y1:h-y2,x1:w-x2]
+            impath = path + imlist[0]
+            img = cv2.imread(impath, 0)
+            h, w = img.shape
+            imgnew = img[y1:h - y2, x1:w - x2]
             self.mr_image_2.setPixmap(cqpx(imgnew))
         except FileNotFoundError:
             print("crop_trial file not found")
@@ -379,17 +397,16 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.pb_play.setEnabled(True)
         self.pb_play.setToolTip("")
 
-
-        #cropsize = [70, 400, 243, 413]  # im = im[58:428, 143:513
+        # cropsize = [70, 400, 243, 413]  # im = im[58:428, 143:513
         # this should be redefined .. it doesnt need to crop initially, but
         # short on time + wanting to finish features = weird code
-        if self.internal_dict['crop'] == [0,0,0,0]:
+        if self.internal_dict['crop'] == [0, 0, 0, 0]:
             cropsize = [58, 428, 270, 390]  # im = im[58:428, 143:513]
             self.imlist = functions.auxiliary.loadin(filelist, path, size=cropsize)
             print("run")
         else:
-            self.imlist = functions.auxiliary.loadpro(filelist,path,self.internal_dict['crop'])
-        #>>>> cropsize = [58, 428, 243, 413]  # im = im[58:428, 143:513]
+            self.imlist = functions.auxiliary.loadpro(filelist, path, self.internal_dict['crop'])
+        # >>>> cropsize = [58, 428, 243, 413]  # im = im[58:428, 143:513]
 
         self.CurMov.get_imlist(imlist=self.imlist)
         self.progress_bar.setMaximum(self.CurMov.maxframes)
@@ -409,7 +426,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
 
         # don't call update_all here. it is already done by the moving progress bar.
 
-    def internal_value_changed(self,key,fun):
+    def internal_value_changed(self, key, fun):
         key_proper = "".join(key)  # do this since key is a list ['keyval'] and u want: 'keyval'
         self.internal_dict[key_proper] = fun()
         if key_proper == 'crop':
@@ -450,7 +467,8 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
 
         # CurMov.update() does all the imagge processing
         self.lineEdit_sumT.start()
-        output = self.CurMov.update(morph_vars, segment_state, timer_list,self.templates,self.checkBox_heq.isChecked())
+        output = self.CurMov.update(morph_vars, segment_state, timer_list, self.templates,
+                                    self.checkBox_heq.isChecked())
         self.lineEdit_sumT.stop()
 
         self.base_image = output[0][0]
@@ -459,7 +477,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.lineEdit_dispT.start()
 
         cindex = self.tabWidget.currentIndex()
-        #print(cindex)
+        # print(cindex)
 
         if self.radioButton_image.isChecked():
             self.filter_image1.setPixmap(output[0][3])
@@ -472,7 +490,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             self.label_sidepic4.setPixmap(output[0][9])  # mask
             # Big pictures
             self.mr_image.setPixmap(output[0][8])  # morphed image
-            self.mr_image_2.setPixmap(output[0][functions.auxiliary.check_index(cindex,1)])  # active window
+            self.mr_image_2.setPixmap(output[0][functions.auxiliary.check_index(cindex, 1)])  # active window
         else:
             self.filter_image1.setPixmap(output[1][2])
             self.filter_image2.setPixmap(output[1][5])
@@ -484,18 +502,18 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             self.label_sidepic4.clear()  # mask
             # Big pictures
             # demo purposeses
-            #self.mr_image.setPixmap(output[1][10])  # morphed image
+            # self.mr_image.setPixmap(output[1][10])  # morphed image
             self.mr_image.setPixmap(cqpx(self.CurMov.currentframe))
             self.label_sidepic3.setPixmap(output[1][10])
-            # self.mr_image_2.setPixmap(output[1][functions.auxiliary.check_index(cindex,2)])  # active window
-            self.mr_image_2.setPixmap(output[0][0])
+            self.mr_image_2.setPixmap(output[1][functions.auxiliary.check_index(cindex, 2)])  # active window
+            # self.mr_image_2.setPixmap(output[0][0])
 
-        # if output[1][11]:
-        #     self.lineEdit_tip_a.setText(str(round(output[1][11][0])))
-        #     self.lineEdit_wall_a.setText(str(round(output[1][11][1])))
-        # if output[1][12]:
-        #     self.lineEdit_tip_wall.setText(str(output[1][12][0]))
-        #     self.lineEdit_closest.setText(str(min(output[1][12])))
+        if output[1][11]:
+            self.lineEdit_tip_a.setText(str(round(output[1][11][0])))
+            self.lineEdit_wall_a.setText(str(round(output[1][11][1])))
+        if output[1][12]:
+            self.lineEdit_tip_wall.setText(str(output[1][12][0]))
+            self.lineEdit_closest.setText(str(min(output[1][12])))
 
         # timing related
         self.lineEdit_dispT.stop(mode='avg')
@@ -615,9 +633,9 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             else:
                 self.template_point = 0
         if ctab == "GLS":
-            val = self.CurMov.gls_image[y,x]
+            val = self.CurMov.gls_image[y, x]
             print(f"this value is {val}")
-            #print(self.slice_select)
+            # print(self.slice_select)
 
     def display_tm(self, index):
         obj_list = [self.label_temp1, self.label_temp2, self.label_temp3, self.label_temp4]
@@ -656,20 +674,19 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         elif len(elements) == 0:
             raise FileNotFoundError("No files in folder, check path")
         counter = 0
-        if path[-1] != '/':         # should do this check more often.
+        if path[-1] != '/':  # should do this check more often.
             path += '/'
         for file in elements:
-            self.templates[counter] = cv2.imread(path + file,0)
+            self.templates[counter] = cv2.imread(path + file, 0)
             my_image = cqpx(self.templates[counter])
             my_image_scaled = my_image.scaled(150, 150)
             obj_list[counter].setPixmap(my_image_scaled)
             counter += 1
 
-    def delete_temp(self,index):
+    def delete_temp(self, index):
         obj_list = [self.label_temp1, self.label_temp2, self.label_temp3, self.label_temp4]
         self.templates[index] = None
         obj_list[index].clear()
-
 
     def play_button(self):
         # extra math for just the play button to determine what the current FPS is and how much time it needs

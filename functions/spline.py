@@ -253,6 +253,7 @@ def dist_determine(point,mask):
                 if mask[(points[ii][1],points[ii][0])] == 255:
                     return points[ii],r
             except IndexError:
-                print(points[ii][0],points[ii][1],r)
+                # print(points[ii][0],points[ii][1],r)
+                pass
 
     return [], []

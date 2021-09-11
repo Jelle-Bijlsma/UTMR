@@ -82,9 +82,8 @@ def templatematch(img, parameters, template_list):
         template_y.append(loc[1])
         template_pos.append(loc)
         for pt in zip(*loc[::-1]):
-            cv2.rectangle(plt_im, pt, (pt[0] + w, pt[1] + h), (200, 0, 0), 2)
             coord_list.append((pt[0] + w2, pt[1] + h2))
-    return plt_im, coord_list
+    return coord_list
 
 
 def sort_out(mylist):

@@ -8,6 +8,7 @@ import functions.filter as filterf
 import functions.line_find as lf
 import functions.spline as spl
 import functions.template as tpm
+import functions.blob_contour as blobf
 
 
 class MovieUpdate:
@@ -36,6 +37,7 @@ class MovieUpdate:
         self.g_filter2 = []
         self.fourier = []
         self.filtered_image1 = []
+        self.blackim = np.zeros((100,100))
 
         self.prevpar = None
         self.prevpar2 = None
@@ -88,6 +90,9 @@ class MovieUpdate:
         # due to the C implementation of numpy, np.ndarray has the tendancy to be shared in memory
         # all kinds of funky things happen when you omit this step.
         base_image = np.copy(self.currentframe)
+        base_image2 = np.copy(self.currentframe)
+
+        im_with_keypoints = base_image
 
         para = self.parameters  # shorthand notation
         output = [list, list]  # predefine
@@ -99,7 +104,7 @@ class MovieUpdate:
         # be measured. Nanosecond possibility.
         gls_t.start(ns=False)
         self.gls_image, histogram = process.calc_gls(base_image, para['GLS'])
-        self.gls_image = 255-self.gls_image
+        #self.gls_image = 255-self.gls_image  # invert image
         if heq is True:
             self.gls_image = cv2.equalizeHist(self.gls_image)
             l, b = self.gls_image.shape
@@ -126,7 +131,7 @@ class MovieUpdate:
         # 'fourier' is raw complex128.
         # para['b_filter'] is only needed for the checkbox
         filtered_image1, fourier, = filterf.apply_filter(parameters=para['b_filter'], filterz=self.b_filter,
-                                                         image=self.gls_image)
+                                                         image=np.copy(self.gls_image))
         filtered_image2, fourier, = filterf.apply_filter(parameters=para['g_filter'], filterz=self.g_filter,
                                                          image=filtered_image1)
         pre_t.stop(mode='avg', cutoff=5)
@@ -170,34 +175,52 @@ class MovieUpdate:
         morph_vars2 = [morph_vars[0][1], morph_vars[1], morph_vars[2]]
         morph_img2 = edge.do_morph(edge_found2, morph_vars2, no_edgefinding2)
 
-        # circle finding
-        circle_im2 = tpm.circlefind(para['circlefinder'], morph_img2)
+        # # circle finding
+        # circle_im2 = tpm.circlefind(para['circlefinder'], morph_img2)
+        # print(para['blob'])
+        if para['template'][0] == True:
 
-        tm_t.start()
-        template, tlist = tpm.templatematch(morph_img2, para['template'], templates)
-        tm_t.stop(mode='avg', cutoff=5)
+            tm_t.start()
+            tlist = tpm.templatematch(morph_img2, para['template'], templates)
+            tm_t.stop(mode='avg', cutoff=5)
 
-        sort_t.start()
-        real_coords = tpm.sort_out(tlist)
-        sort_t.stop(mode='avg', cutoff=5)
 
-        draw_t.start()
-        pre_spline_im = tpm.drawsq(base_image, real_coords, cirq=True)
-        draw_t.stop(mode='avg', cutoff=5)
+        elif para['blob'][0] == True:
+            tlist,keypoints = blobf.blobf(morph_img2, para['blob'])
+            im_with_keypoints = cv2.drawKeypoints(masked, keypoints, np.array([]), (255),
+                                                  cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
+            # do blob detection
 
-        spl1_t.start()
-        spline_coords = spl.get_spline(real_coords, pre_spline_im, para['template'])
-        spl1_t.stop(mode='avg', cutoff=5)
+        # if para['blob'][0] | para['template'][0] == True:
+        if (para['template'][0] | para['blob'][0]) == True:
+            sort_t.start()
+            real_coords = tpm.sort_out(tlist)
+            sort_t.stop(mode='avg', cutoff=5)
 
-        spl2_t.start()
-        mask2 = cv2.morphologyEx(mask, cv2.MORPH_GRADIENT, self.kernel)
-        spline_im, distances = spl.draw_spline(pre_spline_im, spline_coords, mask2, para['template'])
-        spl2_t.stop(mode='avg', cutoff=5)
+            draw_t.start()
+            pre_spline_im = tpm.drawsq(base_image, real_coords, cirq=True)
+            draw_t.stop(mode='avg', cutoff=5)
 
-        template = lf.draw_bb(para['linefinder'], template, spline_coords)
-        lf_t.start()
-        cutout, angles = lf.takelines(para['linefinder'], spline_coords, mask)
-        lf_t.stop(mode='avg', cutoff=5)
+            spl1_t.start()
+            spline_coords = spl.get_spline(real_coords, pre_spline_im, para['template'])
+            spl1_t.stop(mode='avg', cutoff=5)
+
+            spl2_t.start()
+            mask2 = cv2.morphologyEx(mask, cv2.MORPH_GRADIENT, self.kernel)
+            spline_im, distances = spl.draw_spline(pre_spline_im, spline_coords, mask2, para['template'])
+            spl2_t.stop(mode='avg', cutoff=5)
+
+            # angle determination
+            bbox_im = lf.draw_bb(para['linefinder'], base_image2, spline_coords)
+            lf_t.start()
+            cutout, angles = lf.takelines(para['linefinder'], spline_coords, mask)
+            lf_t.stop(mode='avg', cutoff=5)
+
+        else:
+            # set to standard if not done.
+            bbox_im,cutout,spline_im = [self.blackim, self.blackim, self.blackim]
+            angles, distances = [None,None]
+
 
         cqpx_t.start()
         #              0                    1              2            3               4
@@ -213,7 +236,10 @@ class MovieUpdate:
                      #          4                          5                 6                  7
                      cqpx(filterf.prep_fft(fourier2)), cqpx(self.g_filter2), cqpx(edge_found2), cqpx(morph_img2),
                      #       8               9          10           11       12               13
-                     cqpx(circle_im2), cqpx(template), cqpx(cutout), angles, distances, cqpx(spline_im)]
+                     cqpx(base_image), cqpx(bbox_im), cqpx(cutout), angles, distances, cqpx(spline_im),
+                     #      14
+                     cqpx(im_with_keypoints)]
+                    # 8 used to be circleim2.. what?
 
         cqpx_t.stop(mode='avg', cutoff=5)
         return output

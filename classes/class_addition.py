@@ -8,6 +8,7 @@ practice. The class now has timekeeping abilities. Can do averaging based on FPS
 for FAST functions. 
 """
 
+
 def set_to_ms(self: QtWidgets.QLineEdit, seconds, cutoff=8, mode='normal', ns=False):
     # za = Zero Array. This array will host all the different times, so an average can be made.
     if self.za is None:

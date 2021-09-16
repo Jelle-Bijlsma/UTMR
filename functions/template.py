@@ -171,7 +171,7 @@ def drawsq(img, coords, cirq=False):
     if cirq is False:
         for x, y in coords:
             # one day, i need to fill in the actual template size..
-            cv2.circle(img, (x, y),6,255,3)
+            cv2.circle(img, (x, y),3,255)
     else:
         for x, y in coords:
             cv2.circle(img, (x, y), 4, [255, 0, 0])

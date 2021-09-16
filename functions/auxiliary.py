@@ -34,7 +34,7 @@ def check_index(index,radio):
         if index == 4:  # segment but shows GLS
             return 0
         if index == 5:  # template
-            return 9
+            return 8
         if index == 6:
             return 14
         if index == 7:

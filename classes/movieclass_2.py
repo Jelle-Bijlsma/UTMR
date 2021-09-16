@@ -93,6 +93,7 @@ class MovieUpdate:
         base_image2 = np.copy(self.currentframe)
 
         im_with_keypoints = base_image
+        tm_im = base_image2
 
         para = self.parameters  # shorthand notation
         output = [list, list]  # predefine
@@ -183,13 +184,17 @@ class MovieUpdate:
             tm_t.start()
             tlist = tpm.templatematch(morph_img2, para['template'], templates)
             tm_t.stop(mode='avg', cutoff=5)
+            tm_im = tpm.drawsq(base_image,tlist)
 
-
-        elif para['blob'][0] == True:
+        if para['blob'][0] == True:
+            if para['template'][0] == True:
+                tlistpre = tlist
             tlist,keypoints = blobf.blobf(morph_img2, para['blob'])
             im_with_keypoints = cv2.drawKeypoints(masked, keypoints, np.array([]), (255),
                                                   cv2.DRAW_MATCHES_FLAGS_DRAW_RICH_KEYPOINTS)
             # do blob detection
+            if para['template'][0] == True:
+                tlist += tlistpre
 
         # if para['blob'][0] | para['template'][0] == True:
         if (para['template'][0] | para['blob'][0]) == True:
@@ -236,7 +241,7 @@ class MovieUpdate:
                      #          4                          5                 6                  7
                      cqpx(filterf.prep_fft(fourier2)), cqpx(self.g_filter2), cqpx(edge_found2), cqpx(morph_img2),
                      #       8               9          10           11       12               13
-                     cqpx(base_image), cqpx(bbox_im), cqpx(cutout), angles, distances, cqpx(spline_im),
+                     cqpx(tm_im), cqpx(bbox_im), cqpx(cutout), angles, distances, cqpx(spline_im),
                      #      14
                      cqpx(im_with_keypoints)]
                     # 8 used to be circleim2.. what?

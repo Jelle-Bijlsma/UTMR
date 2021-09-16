@@ -1,11 +1,8 @@
 import cv2
 import numpy as np
 
-def contourr():
-    im = cv2.imread('extract_blue.jpg')
-    imgray = cv2.cvtColor(im, cv2.COLOR_BGR2GRAY)
-    im_gauss = cv2.GaussianBlur(imgray, (5, 5), 0)
-    ret, thresh = cv2.threshold(im_gauss, 127, 255, 0)
+def contourr(im):
+    ret, thresh = cv2.threshold(im, 127, 255, 0)
     # get contours
     contours, hierarchy = cv2.findContours(thresh, cv2.RETR_TREE, cv2.CHAIN_APPROX_SIMPLE)
 
@@ -25,8 +22,6 @@ def contourr():
         if perimeter == 0:
             break
         circularity = 4 * 3.14159 * (area / (perimeter * perimeter))
-        print
-        circularity
         if 0.7 < circularity < 1.2:
             contours_cirles.append(con)
 

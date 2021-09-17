@@ -7,6 +7,9 @@ while true; do
   time_ui2=$(date -r ./image_labeler.ui)
   time_python2=$(date -r ./image_labeler.py)
 
+  time_ui3=$(date -r ./listbox.ui)
+  time_python3=$(date -r ./listbox.py)
+
   #echo $time_python
   #echo $time_ui
 
@@ -23,8 +26,17 @@ while true; do
   if [ "$time_ui2" != "$time_python2" ]; then
     pyuic5 -x image_labeler.ui -o image_labeler.py
     echo "Converted image_labeler"
-    touch gui_full.py
-    touch gui_full.ui
+    touch image_labeler.py
+    touch image_labeler.ui
+  else
+    echo "Converted Nothing"
+  fi
+  
+    if [ "$time_ui3" != "$time_python3" ]; then
+    pyuic5 -x listbox.ui -o listbox.py
+    echo "Converted listbox"
+    touch listbox.py
+    touch listbox.ui
   else
     echo "Converted Nothing"
   fi

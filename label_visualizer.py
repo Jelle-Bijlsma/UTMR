@@ -2,11 +2,9 @@ import math
 import pickle
 import os
 import cv2
-import copy
-import numpy as np
 
 
-class Point():
+class Point:
     """"
     Point is a class which can be created by the PointCollector. It tracks it position in X,Y.
     It can remember its position when using the 'update' method, and using check, it can check if the given coordinate
@@ -38,12 +36,12 @@ class Point():
             return False
 
 
-class PointCollector():
-
+class PointCollector:
     """"
-    PointCollector is created to handle an unorganized list of coordinates. Given a list of coordinates, using the 'step' method,
-    it will check if any of the given points fit the profile of Points in the 'activepoints' list. If not, the Points are created.
-    During a 'step' call, if an element of 'activepoints' has no hit, it will be placed in the 'passivepoints' group.
+    PointCollector is created to handle an unorganized list of coordinates. Given a list of coordinates, using the
+    'step' method, it will check if any of the given points fit the profile of Points in the 'activepoints' list.
+    If not, the Points are created. During a 'step' call, if an element of 'activepoints' has no hit, it will be placed
+    in the 'passivepoints' group.
     """
 
     def __init__(self):
@@ -54,10 +52,6 @@ class PointCollector():
         self.allpoints = []
 
     def step(self, coordlist):
-        # ISSUE
-        # points entering from the top dont track properly. @MRI31 during step 22 and 65, using the
-        # showpart function this is visible.
-
         self.stepsdone += 1
         print(self.stepsdone)
         self.checkactive()  # check which points are still on screen
@@ -66,7 +60,7 @@ class PointCollector():
         for point in self.activepoints:
             found = False
             for coord in coordlist:  # check which coord belongs to the point
-                if point.check(coord,self.stepsdone) == True:
+                if point.check(coord, self.stepsdone):
                     found = True
                     break
             # <-- from break go here
@@ -77,32 +71,24 @@ class PointCollector():
                 point.active = False
             else:
                 # throw an error if this case occurs
-                a = 5/0
-        #
-        # self.checkactive()
-        # if (self.stepsdone >22) & (self.stepsdone < 65):
-        #     print(self.activepoints[-1].x,self.activepoints[-1].y)
-        #
-        # if (self.stepsdone > 65):
-        #     print(self.activepoints[-2].x,self.activepoints[-2].y)
-
+                a = 5 / 0
 
         # if not assigned to a Point, create one.
         for element in coordlist:
             x, y, _ = element
             print(f"created a point {x, y}")
-            self.allpoints.append(Point(x,y))
-
+            self.allpoints.append(Point(x, y))
 
     def checkactive(self):
         self.activepoints = []
         self.passivepoints = []
 
         for point in self.allpoints:
-            if point.active == True:
+            if point.active:
                 self.activepoints.append(point)
             else:
                 self.passivepoints.append(point)
+
 
 def show_full(images, malist):
     """"
@@ -116,7 +102,7 @@ def show_full(images, malist):
         cv2.imshow('window', img)
         k = cv2.waitKey(100)
         if k == 27:
-           return
+            return
 
 
 def show_part(images, point: Point):

@@ -6,8 +6,10 @@ import QT_Gui.listbox
 from functions.process import change_qpix as cqpx
 import pickle
 
+
 class PointWindow(QtWidgets.QWidget, QT_Gui.listbox.Ui_Form):
-    def __init__(self, form,scrollclass, label:QtWidgets.QLabel):
+
+    def __init__(self, form, scrollclass, label: QtWidgets.QLabel):
         super().__init__()
         self.setupUi(form)
         self.clicklist = []
@@ -25,13 +27,6 @@ class PointWindow(QtWidgets.QWidget, QT_Gui.listbox.Ui_Form):
         self.loadem(production=False)
 
     def delete_entry(self):
-        # cursor = QtGui.QTextCursor(self.textEdit.document())
-        # cursor.movePosition(self.textEdit.textCursor().position())
-        # cursor.movePosition(cursor.StartOfLine)
-        # cursor.movePosition(cursor.EndOfLine,cursor.KeepAnchor)
-        # print(cursor.selectedText())
-        #self.textEdit.setTextCursor(cursor)
-        #self.textEdit.insertPlainText("jej")
         linenumber = 0
         txtE = self.textEdit
         cursor = txtE.textCursor()
@@ -49,7 +44,7 @@ class PointWindow(QtWidgets.QWidget, QT_Gui.listbox.Ui_Form):
             a_warning.exec()
         self.update_text()
 
-        #print(self.textEdit.cursor().pos().y())
+        # print(self.textEdit.cursor().pos().y())
 
     def savepoints(self):
         try:
@@ -59,7 +54,7 @@ class PointWindow(QtWidgets.QWidget, QT_Gui.listbox.Ui_Form):
 
         print(str(name[0]))
         f = open(name[0], 'wb')
-        pickle.dump((self.clicklist,self.image_number),f)
+        pickle.dump((self.clicklist, self.image_number), f)
         f.close()
 
     def loadpoints(self):
@@ -68,7 +63,7 @@ class PointWindow(QtWidgets.QWidget, QT_Gui.listbox.Ui_Form):
         except FileNotFoundError:
             return
 
-        f = open(name[0],'rb')
+        f = open(name[0], 'rb')
         self.clicklist, self.image_number = pickle.load(f)
         f.close()
         self.scrollclass.change_img(self.image_list[self.image_number])
@@ -85,23 +80,29 @@ class PointWindow(QtWidgets.QWidget, QT_Gui.listbox.Ui_Form):
     def update_text(self):
         self.textEdit.setText("")
         for element in self.clicklist[self.image_number]:
-            self.textEdit.append(f"x = {element[0]}, y = {element[1]}")
+            self.textEdit.append(f"x = {element[0]}, y = {element[1]}, b = {element[2]}")
         points = len(self.clicklist[self.image_number])
         self.label_5.setText(str(points))
-        self.label_2.setText("..." + self.image_path_list[self.image_number][-53:-49] + "..." + self.image_path_list[self.image_number][-20:])
-
-
+        self.label_2.setText(
+            "..." + self.image_path_list[self.image_number][-53:-49] + "..." + self.image_path_list[self.image_number][
+                                                                               -20:])
 
     def click(self, event: QtGui.QMouseEvent):
         # left or right?
         if event.button() == 1:
-            self.clicklist[self.image_number].append((self.rescaled_x, self.rescaled_y))
+            brightness = self.scrollclass.nparray[int(self.rescaled_y),int(self.rescaled_x)]
+            self.clicklist[self.image_number].append((self.rescaled_x, self.rescaled_y, brightness))
+            self.clicklist[self.image_number] = sorted(self.clicklist[self.image_number],key=lambda x: x[1])
         self.update_text()
 
     def update_coords(self):
         self.lineEdit.setText(str(self.rescaled_x))
         self.lineEdit_2.setText(str(self.rescaled_y))
-
+        try:
+            brightness = self.scrollclass.nparray[int(self.rescaled_y),int(self.rescaled_x)]
+            self.label_8.setText(str(brightness))
+        except IndexError:
+            self.label_8.setText("")
     def go_30_forward(self):
         for ii in range(10):
             self.next_image()
@@ -110,16 +111,15 @@ class PointWindow(QtWidgets.QWidget, QT_Gui.listbox.Ui_Form):
         for ii in range(10):
             self.prev_image()
 
-
     def next_image(self):
-        if self.image_number >= len(self.image_list)-1:
+        if self.image_number >= len(self.image_list) - 1:
             self.image_number = 0
         else:
             self.image_number += 1
         image = self.image_list[self.image_number]
         self.scrollclass.change_img(image)
         # print(type(image))
-        self.progress.setText(f"image {self.image_number} of {len(self.image_list)-1}")
+        self.progress.setText(f"image {self.image_number} of {len(self.image_list) - 1}")
         self.update_text()
 
         # get image name
@@ -128,15 +128,15 @@ class PointWindow(QtWidgets.QWidget, QT_Gui.listbox.Ui_Form):
 
     def prev_image(self):
         if self.image_number == 0:
-            self.image_number = len(self.image_list)-1
+            self.image_number = len(self.image_list) - 1
         else:
             self.image_number -= 1
         image = self.image_list[self.image_number]
         self.scrollclass.change_img(image)
-        self.progress.setText(f"image {self.image_number} of {len(self.image_list)-1}")
+        self.progress.setText(f"image {self.image_number} of {len(self.image_list) - 1}")
         self.update_text()
 
-    def loadem(self, production = True):
+    def loadem(self, production=True):
         # try and select folder. If user cancelled, return. Else, continue.
         if production is True:
             try:
@@ -156,7 +156,7 @@ class PointWindow(QtWidgets.QWidget, QT_Gui.listbox.Ui_Form):
             self.image_list.append(cv2.imread(fp, 0))
             self.clicklist.append([])
         self.image_number = 0
-        self.progress.setText(f"image {self.image_number} of {len(self.image_list)-1}")
+        self.progress.setText(f"image {self.image_number} of {len(self.image_list) - 1}")
         self.scrollclass.change_img(self.image_list[self.image_number])
         self.update_text()
 
@@ -172,23 +172,24 @@ class ScrollClass:
         self.w = self.qpix.width()
         self.h = self.qpix.height()
         self.qpix_og = cqpx(img)
-        self.image = label
+        self.image: QtWidgets.QLabel = label
         self.ctrl_pressed = False
         self.hbar = hbar
         self.vbar = vbar
         label.setPixmap(self.qpix)
-
+        self.nparray = img
         self.rel_v = 0
         self.rel_h = 0
 
         self.labelsize = (self.qpix_og.width(), self.qpix_og.height())
 
-    def change_img(self,img):
+    def change_img(self, img):
+        self.nparray = img
         self.qpix_og = cqpx(img)
         self.change_size(42069, override=True)
         print("nextim")
 
-    def change_size(self, ch_s,override = False):
+    def change_size(self, ch_s, override=False):
         if self.ctrl_pressed or (override is True):
             if ch_s == 0:
                 pass
@@ -223,16 +224,16 @@ class ScrollClass:
         pos_h = self.hbar.sliderPosition()
         pos_v = self.vbar.sliderPosition()
         if (pos_h != 0) & (pos_v != 0):
-            #print(f"pos_h = {pos_h}")
+            # print(f"pos_h = {pos_h}")
             self.rel_h = (pos_h / max_h)
             self.rel_v = (pos_v / max_v)
-            #print(self.rel_v, self.rel_h)
+            # print(self.rel_v, self.rel_h)
 
     def set_scroll(self, diff):
         # min_h = self.hbar.minimum() <- its always 0!
         max_h = self.hbar.maximum()
         max_v = self.vbar.maximum()
-        #print(diff)
+        # print(diff)
 
         if (max_h > 0) & (max_v > 0):
             self.hbar.setValue(int(max_h * self.rel_h + diff[0] / 2))

@@ -61,6 +61,7 @@ def mouseMoveEvent(self, event: QtGui.QMouseEvent):
     y_rescale = event.y() * yscale
     self.PtWin.rescaled_x = np.floor(x_rescale)
     self.PtWin.rescaled_y = np.floor(y_rescale)
+    # QtWidgets.QToolTip.showText(event.pos(),str(x_rescale)+ str(y_rescale))
     self.PtWin.update_coords()
 
 

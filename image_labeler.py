@@ -27,7 +27,7 @@ class MainWindowz(QtWidgets.QMainWindow, QT_Gui.image_labeler.Ui_MainWindow):
         # self.statusbar = QtWidgets.QStatusBar()
         self.statusbar.showMessage("my G", 20000)
         self.setStatusBar(self.statusbar)
-        self.actionLoad_New.triggered.connect(self.PtWin.loadem)
+        self.actionLoad_New.triggered.connect(lambda: self.PtWin.loadem(production=True))
         self.actionSave_Keypoints.triggered.connect(self.PtWin.savepoints)
         self.actionLoad_Keypoints.triggered.connect(self.PtWin.loadpoints)
 

@@ -54,7 +54,7 @@
         <item row="3" column="2">
          <widget class="QStackedWidget" name="stackedWidget">
           <property name="currentIndex">
-           <number>2</number>
+           <number>1</number>
           </property>
           <widget class="QWidget" name="homepage">
            <layout class="QGridLayout" name="gridLayout_18">
@@ -3329,7 +3329,7 @@
                </sizepolicy>
               </property>
               <property name="currentIndex">
-               <number>0</number>
+               <number>8</number>
               </property>
               <widget class="QWidget" name="GLS">
                <attribute name="title">
@@ -6701,6 +6701,13 @@ p, li { white-space: pre-wrap; }
                  <widget class="QLabel" name="label_wall_angle">
                   <property name="text">
                    <string>wall angle</string>
+                  </property>
+                 </widget>
+                </item>
+                <item row="8" column="6">
+                 <widget class="QPushButton" name="pushButton_getkp">
+                  <property name="text">
+                   <string>get keypoints</string>
                   </property>
                  </widget>
                 </item>

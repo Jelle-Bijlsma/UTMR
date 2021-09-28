@@ -22,7 +22,7 @@ class MovieUpdate:
         self.frame = np.array([])
         self._imloaded = False
         self.maxframes = 0
-        self.frame_number = 2
+        self.frame_number = 0
         self.parameters = {}
         self.used_parameters = {}
         self.currentframe = None
@@ -43,6 +43,9 @@ class MovieUpdate:
         self.prevpar2 = None
         self.edge_status = None
 
+        #
+        self.getkp = False
+
         t1 = cv2.imread("./data/templates/scale1.png", 0)
         t2 = cv2.imread("./data/templates/scale2.png", 0)
         self.template_list = [t1, t2]
@@ -53,7 +56,8 @@ class MovieUpdate:
         created the concept of an image stream together with "get_frame"
         It is not put in __init__ due to the 'imlist' being available only after the creation of the MovieUpdate class.
         """
-        self.maxframes = len(imlist) - 1
+        self.maxframes = len(imlist) -1
+        print(f"the max frames are {self.maxframes}")
         self.imlist = imlist
         self.currentframe = self.imlist[self.frame_number]
         self._imloaded = True
@@ -67,7 +71,7 @@ class MovieUpdate:
             raise Exception("call 'get_imlist' first")
         # introduce a frame
         if self.frame_number == self.maxframes:
-            self.frame_number = 1
+            self.frame_number = 0
         else:
             self.frame_number += 1
         self.currentframe = self.imlist[self.frame_number]
@@ -245,6 +249,9 @@ class MovieUpdate:
                      #      14
                      cqpx(im_with_keypoints)]
                     # 8 used to be circleim2.. what?
+
+        if self.getkp is True:
+            output.append(real_coords)
 
         cqpx_t.stop(mode='avg', cutoff=5)
         return output

@@ -159,25 +159,28 @@ def color_determine(point, mask, parameter):
         danger = 4
 
     # safe space
-    if radius >= safe:
-        color = [0, 255, 0]
-    # medium space
-    elif (radius < safe) & (radius > danger):
-        if radius >= medium:
-            # dy = 0-1
-            rc = -1 / (safe - medium)
-            b = 1 - rc * medium
-            scale = int(round((radius * rc + b) * 255))
-            color = [scale, 255, 0]
+    try:
+        if radius >= safe:
+            color = [0, 255, 0]
+        # medium space
+        elif (radius < safe) & (radius > danger):
+            if radius >= medium:
+                # dy = 0-1
+                rc = -1 / (safe - medium)
+                b = 1 - rc * medium
+                scale = int(round((radius * rc + b) * 255))
+                color = [scale, 255, 0]
 
+            else:
+                # dy = 1-0
+                rc = 1 / (medium - danger)
+                b = 0 - rc * danger
+                scale = int(round((radius * rc + b) * 255))
+                color = [255, scale, 0]
         else:
-            # dy = 1-0
-            rc = 1 / (medium - danger)
-            b = 0 - rc * danger
-            scale = int(round((radius * rc + b) * 255))
-            color = [255, scale, 0]
-    else:
-        color = [255, 0, 0]
+            color = [255, 0, 0]
+    except TypeError:
+        color = [0,0,0]
     return color, radius, spoints
 
 

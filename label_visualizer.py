@@ -48,19 +48,20 @@ class PointCollector:
         print("you have summoned the PointCollector")
         self.activepoints = []
         self.passivepoints = []
-        self.stepsdone = -1
+        self.time = -1
         self.allpoints = []
+        self.coords = []
 
     def step(self, coordlist):
-        self.stepsdone += 1
-        print(self.stepsdone)
+        self.time += 1
+        print(self.time)
         self.checkactive()  # check which points are still on screen
 
         # iterate over every active point to see if the new points are close to them
         for point in self.activepoints:
             found = False
             for coord in coordlist:  # check which coord belongs to the point
-                if point.check(coord, self.stepsdone):
+                if point.check(coord, self.time):
                     found = True
                     break
             # <-- from break go here
@@ -78,6 +79,15 @@ class PointCollector:
             x, y, _ = element
             print(f"created a point {x, y}")
             self.allpoints.append(Point(x, y))
+
+        # # can just use coordlist :/
+        # self.checkactive() # needed for nextline
+        # minilist = []
+        # for point in self.activepoints:
+        #     minilist.append((point.x, point.y))
+        # self.coords.append(minilist)
+
+
 
     def checkactive(self):
         self.activepoints = []
@@ -138,36 +148,44 @@ def show_part(images, point: Point):
             pass
 
 
-# create the pointcollector and  load in all the selected points
-pc = PointCollector()
-#path = "./data/keypoints_mri31.pcl"
-#path = "./data/keypoints_mri_32.pcl"
-#path = "./data/keypoints_mri_blur.pcl"
-path = "./data/keypoints_mri_stationary.pcl"
+if __name__ == "__main__":
+    # create the pointcollector and  load in all the selected points
+    pc = PointCollector()
+    path = "./data/keypoints_mri31.pcl"
+    # path = "./data/keypoints_mri_32.pcl"
+    # path = "./data/keypoints_mri_blur.pcl"
+    # path = "./data/keypoints_mri_stationary.pcl"
 
-file = open(path, 'rb')
-malist, _ = pickle.load(file)
-file.close()
+    file = open(path, 'rb')
+    malist, _ = pickle.load(file)
+    file.close()
 
-# create an 'images' list which hosts all the original footage
-images = []
-#png_path = "./data/png/mri31/"
-#png_path = "./data/png/mri32/"
-#png_path = "./data/png/0315_moving_blur/"
-png_path = "./data/png/0313_stationary/"
+    # create an 'images' list which hosts all the original footage
+    images = []
+    png_path = "./data/png/mri31/"
+    # png_path = "./data/png/mri32/"
+    # png_path = "./data/png/0315_moving_blur/"
+    # png_path = "./data/png/0313_stationary/"
 
-png_files = os.listdir(png_path)
-png_files = sorted(png_files)
-for element in png_files:
-    fp = png_path + element
-    images.append(cv2.imread(fp, 0))
+    png_files = os.listdir(png_path)
+    png_files = sorted(png_files)
+    for element in png_files:
+        fp = png_path + element
+        images.append(cv2.imread(fp, 0))
 
-show_full(images, malist)
+    file = open('./data/pointcollector.pcl', 'wb')
+    pickle.dump(pc, file)
+    file.close()
 
-# run the pointcollector over every frame
-for item in malist:
-    pc.step(item)
+    display = True
 
-# display the results of the pointcollector
-for element in pc.allpoints:
-    show_part(images, element)
+    if display is True:
+        show_full(images, malist)
+
+        # run the pointcollector over every frame
+        for item in malist:
+            pc.step(item)
+
+        # display the results of the pointcollector
+        for element in pc.allpoints:
+            show_part(images, element)

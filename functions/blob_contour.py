@@ -52,10 +52,10 @@ def blobf(im,para):
     keypoints = detector.detect(im)
     kpcoords = []
     if len(keypoints)>1:
-        print(type(keypoints[0]))
+        #print(type(keypoints[0]))
         for element in keypoints:
             kpcoords.append(element.pt)
-        print(kpcoords)
+        #print(kpcoords)
     return kpcoords, keypoints
     #print(keypoints)
 

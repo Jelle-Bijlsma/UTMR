@@ -203,7 +203,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         # $ $ $ $ video editor
         # video player
         self.pb_load_movie.clicked.connect(self.filebrowse_png)
-        self.progress_bar.setMinimum(2)
+        self.progress_bar.setMinimum(0)
         self.progress_bar.valueChanged.connect(self.progress_bar_fun)
         self.pb_reset.clicked.connect(self.reset_button)
         self.pb_play.clicked.connect(self.play_button)
@@ -250,10 +250,20 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.mr_image_2.mousePressEvent = self.get_pixel
         self.checkBox_segment.stateChanged.connect(self.update_all_things)
 
+        # get keypoints
+        self.pushButton_getkp.clicked.connect(self.getkeypoints)
+
         if testing is True:
             self.filebrowse_png(True)  # load in all images and go through update cycle
             # self.para_loader(stdpath=False)
             # self.filebrowse_png(True)  # load in all images and go through update cycle
+    #
+    def getkeypoints(self):
+        self.CurMov.getkp = True
+        self.kp = []
+        self.mesnum = 0
+        print(self.mesnum)
+        print("starteeed")
 
     """This was __init__. Now that this is done, we have created the entire event handling. All the functions
     following now, are mentioned in the previous section. """
@@ -513,7 +523,10 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             self.lineEdit_wall_a.setText(str(round(output[1][11][1])))
         if output[1][12]:
             self.lineEdit_tip_wall.setText(str(output[1][12][0]))
-            self.lineEdit_closest.setText(str(min(output[1][12])))
+            try:
+                self.lineEdit_closest.setText(str(min(output[1][12])))
+            except TypeError:
+                pass
 
         # timing related
         self.lineEdit_dispT.stop(mode='avg')
@@ -521,6 +534,18 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.lineEdit_uaT_min.setText(self.lineEdit_uaT.t_min)
         self.lineEdit_uaT_max.setText(self.lineEdit_uaT.t_max)
         self.lineEdit_difT.setText(str((self.req_time * 1000 - self.lineEdit_uaT.mean) / self.FPS)[0:8])
+
+        if self.CurMov.getkp is True:
+            self.kp.append([output[2]])
+            if self.CurMov.maxframes == self.CurMov.frame_number:
+                file = open('./data/measured_mri32','wb')
+                pickle.dump((self.kp,self.internal_dict['crop']),file)
+                file.close()
+                print("written file")
+                self.CurMov.getkp = False
+                self.kp = []
+            print(f"stored value {self.CurMov.frame_number}")
+            self.mesnum += 1
 
     def morphstring_add(self, stringz):
         """"

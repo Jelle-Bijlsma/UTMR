@@ -2734,6 +2734,9 @@ class Ui_MainWindow(object):
         self.label_wall_angle = QtWidgets.QLabel(self.tab_8)
         self.label_wall_angle.setObjectName("label_wall_angle")
         self.gridLayout_9.addWidget(self.label_wall_angle, 7, 0, 1, 2)
+        self.pushButton_getkp = QtWidgets.QPushButton(self.tab_8)
+        self.pushButton_getkp.setObjectName("pushButton_getkp")
+        self.gridLayout_9.addWidget(self.pushButton_getkp, 8, 6, 1, 1)
         self.tabWidget.addTab(self.tab_8, "")
         self.gridLayout_11.addWidget(self.tabWidget, 1, 1, 1, 4)
         self.stackedWidget.addWidget(self.editor_page)
@@ -2853,8 +2856,8 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuOptions.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.stackedWidget.setCurrentIndex(2)
-        self.tabWidget.setCurrentIndex(0)
+        self.stackedWidget.setCurrentIndex(1)
+        self.tabWidget.setCurrentIndex(8)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
 
     def retranslateUi(self, MainWindow):
@@ -3028,6 +3031,7 @@ class Ui_MainWindow(object):
         self.label_50.setText(_translate("MainWindow", "Difference"))
         self.label_56.setText(_translate("MainWindow", "max ua"))
         self.label_wall_angle.setText(_translate("MainWindow", "wall angle"))
+        self.pushButton_getkp.setText(_translate("MainWindow", "get keypoints"))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_8), _translate("MainWindow", "Results"))
         self.label_10.setText(_translate("MainWindow", "Dicom Reader"))
         self.label_dcmpath.setText(_translate("MainWindow", "Dicom Path"))

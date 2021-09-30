@@ -205,14 +205,13 @@ def generate_data(trial_num, plotting,video):
             cv2.waitKey(0)
 
     # generate the end plots
-    pvar1 = []
-    pvar2 = []
-    pvar3 = []
-    pvar4 = []
+    pvar1 = []  # total correctly assigned points
+    pvar2 = []  # average error
+    pvar3 = []  # number of faulty points
+    pvar4 = []  # number of true points
 
     for ba, faulty, tr in zip(big_ass, big_faulty, truecoordlist):
         pvar1.append(len(ba))
-        pvar4.append(len(tr))
         total = 0
         for element in ba:
             total += element.distance
@@ -221,6 +220,7 @@ def generate_data(trial_num, plotting,video):
         else:
             pvar2.append(0)
         pvar3.append(len(faulty))
+        pvar4.append(len(tr))
 
     i = range(len(pvar1))
     plt.plot(i, pvar1)

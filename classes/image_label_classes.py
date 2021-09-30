@@ -1,5 +1,4 @@
 import os
-import time
 import cv2
 from PyQt5 import QtWidgets, QtGui
 import QT_Gui.listbox

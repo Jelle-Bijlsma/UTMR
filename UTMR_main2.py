@@ -325,7 +325,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         if stdpath is True:
             path = self.lineEdit_params.text()
         else:
-            path = "./data/parameters/parameters0131.pcl"
+            path = "./data/parameters/parameters11.pcl"
 
         file = open(path, 'rb')
         loaded_p_list = pickle.load(file)
@@ -538,7 +538,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         if self.CurMov.getkp is True:
             self.kp.append([output[2]])
             if self.CurMov.maxframes == self.CurMov.frame_number:
-                file = open('./data/measured_mri32','wb')
+                file = open('./data/measured_mri32.pcl','wb')
                 pickle.dump((self.kp,self.internal_dict['crop']),file)
                 file.close()
                 print("written file")

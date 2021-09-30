@@ -1,6 +1,5 @@
-import os
 import cv2
-from PyQt5 import QtWidgets, QtGui, QtCore
+from PyQt5 import QtWidgets
 import QT_Gui.image_labeler
 import QT_Gui.listbox
 import sys
@@ -9,6 +8,23 @@ from functions.process import change_qpix as cqpx
 from classes.image_label_classes import PointWindow as PointWindow
 from classes.image_label_classes import ScrollClass as ScrollClass
 import functions.labeler_custom_event as custom
+
+"""
+Image labeler is a program used to determine the true location of magnetic marker points in a list of images. 
+CTRL + scroll is zoom
+CTRL + right/left arrow key is goto next/previous picture. 
+Left click in the picture to select a point.
+left click the point in the pointwindow and press delete to delete the selected point. 
+
+The selected keypoints can be saved as:
+[[(x01,y01,b01) , (x02,y02,b02) .... ]
+[(x11,y11,b11) , (x12,y12,b12) ...]
+...
+]]
+
+first index is the frame, second index is the point. b= brightness value.
+The points are ordered in increasing y value.
+"""
 
 class MainWindowz(QtWidgets.QMainWindow, QT_Gui.image_labeler.Ui_MainWindow):
     def __init__(self, form):
@@ -20,17 +36,15 @@ class MainWindowz(QtWidgets.QMainWindow, QT_Gui.image_labeler.Ui_MainWindow):
         image = cv2.imread("./data/png/mri31/RLI_JB_RAM_CATH_TRACKING.MR.ABDOMEN_LIBRARY."
                            "0031.0041.2021.09.02.15.32.11.998847.16889705.IMA.png")
 
+        # Scrollclass is responsible for allowing image zooming & scrolling
         self.ScrCls = ScrollClass(image, self.label, self.scrollArea.horizontalScrollBar(),
                                   self.scrollArea.verticalScrollBar())
+        # Creates the PointWindow, which hosts all the selected points for each image.
         self.create_ting(MainWindow, self.ScrCls)
 
-        # self.statusbar = QtWidgets.QStatusBar()
-        self.statusbar.showMessage("my G", 20000)
-        self.setStatusBar(self.statusbar)
         self.actionLoad_New.triggered.connect(lambda: self.PtWin.loadem(production=True))
         self.actionSave_Keypoints.triggered.connect(self.PtWin.savepoints)
         self.actionLoad_Keypoints.triggered.connect(self.PtWin.loadpoints)
-
 
         self.image = cqpx(image)
         self.label.setPixmap(self.image)

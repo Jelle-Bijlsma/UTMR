@@ -13,7 +13,10 @@ This function compares the 'measured results' which are obtained by the program,
 obtained by human selection. Green points are points whitin the 'maxdist' or maximum distance range, yellow points are
 points the program missed, and red points are mislabeled points.
 
-Continue to the next frame with spacebar 
+Continue to the next frame with spacebar .
+
+This script requires a different interpreter without QT if you want to play the video. This is due to using
+CV2 headless in the original interpreter. 
 """
 
 class Point:

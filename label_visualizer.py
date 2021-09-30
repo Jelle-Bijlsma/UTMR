@@ -3,6 +3,11 @@ import pickle
 import os
 import cv2
 
+"""
+This script requires a different interpreter without QT if you want to play the video. This is due to using
+CV2 headless in the original interpreter. 
+"""
+
 
 class Point:
     """"
@@ -87,8 +92,6 @@ class PointCollector:
         #     minilist.append((point.x, point.y))
         # self.coords.append(minilist)
 
-
-
     def checkactive(self):
         self.activepoints = []
         self.passivepoints = []
@@ -151,8 +154,8 @@ def show_part(images, point: Point):
 if __name__ == "__main__":
     # create the pointcollector and  load in all the selected points
     pc = PointCollector()
-    path = "./data/keypoints_mri31.pcl"
-    # path = "./data/keypoints_mri_32.pcl"
+    trial_number = 31
+    path = f"./data/keypoints_mri{trial_number}.pcl"
     # path = "./data/keypoints_mri_blur.pcl"
     # path = "./data/keypoints_mri_stationary.pcl"
 
@@ -162,8 +165,7 @@ if __name__ == "__main__":
 
     # create an 'images' list which hosts all the original footage
     images = []
-    png_path = "./data/png/mri31/"
-    # png_path = "./data/png/mri32/"
+    png_path = f"./data/png/mri{trial_number}/"
     # png_path = "./data/png/0315_moving_blur/"
     # png_path = "./data/png/0313_stationary/"
 
@@ -173,19 +175,13 @@ if __name__ == "__main__":
         fp = png_path + element
         images.append(cv2.imread(fp, 0))
 
-    file = open('./data/pointcollector.pcl', 'wb')
-    pickle.dump(pc, file)
-    file.close()
-
     display = True
 
     if display is True:
         show_full(images, malist)
-
         # run the pointcollector over every frame
         for item in malist:
             pc.step(item)
-
         # display the results of the pointcollector
         for element in pc.allpoints:
             show_part(images, element)

@@ -48,7 +48,9 @@ their functions and workings.)
 In the folder `./functions/` all the additional functions are placed, and they are categorized according to their
 purpose (all filtering related functions are found in `filter.py` for example). 
 
-###detailed description
+###additional
+get qt-designer!
+```sudo apt-get install qtcreator pyqt5-dev-tools```
 
 
 

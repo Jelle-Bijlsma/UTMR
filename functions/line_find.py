@@ -86,7 +86,11 @@ def takelines(params, cp, mask):
 
     x1, y1 = cp[0]
     x2, y2 = cp[4]
-    tip_angle = (((np.arctan(((y1 - y2)) / ((x1 - x2)))) / np.pi) * 180)
+    try:
+        tip_angle = (((np.arctan(((y1 - y2)) / ((x1 - x2)))) / np.pi) * 180)
+    except ZeroDivisionError:
+        print("you tried to divide by zero, so we set tip angle to zero for u to prevent errors")
+        tip_angle = 0
     wall_angle = np.mean(anglist)
 
     return mask_crop, [tip_angle, wall_angle]

@@ -394,7 +394,9 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         if test is False:
             path = str(a.getExistingDirectory(MainWindow, 'select folder with pngs'))
         else:
-            path = "/home/jelle/PycharmProjects/UTMR/data/png/mri31"
+            #path = "/home/jelle/PycharmProjects/UTMR/data/png/mri31"
+            path = str(a.getExistingDirectory(MainWindow, 'select folder with pngs'))
+            print(path)
         # 'get existing directory' never uses the final '/' so you have to manually input it.
         self.lineEdit_importpath.setText(path)
         filelist = os.listdir(path)
@@ -536,9 +538,16 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
         self.lineEdit_difT.setText(str((self.req_time * 1000 - self.lineEdit_uaT.mean) / self.FPS)[0:8])
 
         if self.CurMov.getkp is True:
+            """
+            HOW TO OBTAIN. Set everything in the ready.
+            (also change the file output name) 
+            Put the last frame on!! else you get assertion error in 'compare files'
+            Hit 'get keypoints'
+            press play
+            """
             self.kp.append([output[2]])
             if self.CurMov.maxframes == self.CurMov.frame_number:
-                file = open('./data/measured_mri32.pcl','wb')
+                file = open('./data/measured_mri1.pcl','wb')
                 pickle.dump((self.kp,self.internal_dict['crop']),file)
                 file.close()
                 print("written file")

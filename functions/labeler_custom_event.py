@@ -38,6 +38,10 @@ def keyPressEvent(self: Mainz, event: QtGui.QKeyEvent) -> None:
         return
     elif event.key() == 76:  # L
         self.PtWin.loadem()
+    elif event.key() == 61: # plus
+        self.ScrCls.change_size(10)
+    elif event.key() == 45:
+        self.ScrCls.change_size(-10)
 
     super(QtWidgets.QScrollArea, self.scrollArea).keyPressEvent(event)
 

@@ -160,6 +160,13 @@ def generate_data(trial_num, plotting,video):
     png_path = f"./data/png/mri{trial_num}/"
     images = load_pngs(png_path)
 
+    # print(len(pre_measured))
+    # print(len(pre_truecoordlist))
+    assert len(pre_measured) == len(pre_truecoordlist), "wrong length of input or output" \
+                                                        "this probably happened due to not setting the slider" \
+                                                        "at last frame, or an error occured during data " \
+                                                        "extraction. "
+
     # remove brightness
     for clist in pre_truecoordlist:
         clist_new = []
@@ -238,6 +245,7 @@ def generate_data(trial_num, plotting,video):
     return da_mean,da_sd, pvar2
 
 if __name__ == "__main__":
+    # res is average error
     mean1, sd1, res1 = generate_data(31,plotting=True,video=False)
     mean2, sd2, res2, = generate_data(32, plotting=True, video=False)
 
@@ -263,3 +271,36 @@ if __name__ == "__main__":
 
     ttest1 = stats.ttest_rel(res1,res2)
     print(f"t-test value of run31 & run32: {ttest1}")
+
+    ####################################################################################
+
+    mean1, sd1, res1 = generate_data(0,plotting=True,video=False)
+    mean2, sd2, res2, = generate_data(1, plotting=True, video=False)
+
+    print(f"Standard deviation run0: {sd1}, mean: {mean1}")
+    print(f"Standard deviation run1: {sd2}, mean: {mean2}")
+
+    res1= np.array(res1)
+    rmsq1 = (np.sum(res1**2)**0.5)/len(res1)
+    res2 = np.array(res2)
+    res2 = res2[res2 != 0]
+    rmsq2 = (np.sum(res2**2)**0.5)/len(res2)
+
+    mae1 = np.max(res1)
+    mae2 = np.max(res2)
+
+    print(f"RMSQ of run0: {rmsq1}, MAE: {mae1}")
+    print(f"RMSQ of run1: {rmsq2}, MAE: {mae2}")
+
+    swq1 = stats.shapiro(res1)
+    swq2 = stats.shapiro(res2)
+
+    print(f"Shapiro Wilkes of run0: {swq1}")
+    print(f"Shapiro Wilkes of run1: {swq2}")
+
+    # done to take the arrays of equal size such that we can compare them.
+    res1_ext = np.append(res1,res1)
+    res2_ext = np.append(res2,res2)
+    res2_ext = res2_ext[0:len(res1_ext)]
+    ttest1 = stats.ttest_rel(res1_ext,res2_ext)
+    print(f"t-test value of run0 & run1: {ttest1}")

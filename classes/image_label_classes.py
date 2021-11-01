@@ -5,8 +5,16 @@ import QT_Gui.listbox
 from functions.process import change_qpix as cqpx
 import pickle
 
+"""
+Classes used by the image labeler.
+"""
 
 class PointWindow(QtWidgets.QWidget, QT_Gui.listbox.Ui_Form):
+    """"
+    Pointwindow represents the secondary window used to log all the points per frame.
+    It also serves to delete entry's, go to previous/next frames. Inherits visuals from the listbox,
+    and calling super().__init__() and .setupUi
+    """
 
     def __init__(self, form, scrollclass, label: QtWidgets.QLabel):
         super().__init__()
@@ -16,21 +24,26 @@ class PointWindow(QtWidgets.QWidget, QT_Gui.listbox.Ui_Form):
         self.rescaled_y = 0
         self.scrollclass = scrollclass
         self.progress = label
-        # self.__repr__ = "jemo"
 
         self.pushButton.clicked.connect(self.delete_entry)
         self.pushButton_2.clicked.connect(self.delete_all_entry)
         self.pushButton_3.clicked.connect(self.prev_image)
         self.pushButton_4.clicked.connect(self.next_image)
-        # self.textEdit.keyPressEvent =
+
+        # loads in one standard image set, set to True if youre not developing anymore
         self.loadem(production=False)
 
     def delete_entry(self):
+        """"Put the caret at the corresponding entry, then press this button."""
         linenumber = 0
-        txtE = self.textEdit
+        txtE = self.textEdit  # ? what? you might think. However, if you check, the PointWindow inherits from
+        # QT_Gui.listbox, so then you can actually call it.
+
         cursor = txtE.textCursor()
         cursor.movePosition(cursor.StartOfLine)
 
+        """"To find out at which line number the user was, we recursively
+        go up until we are at the start of the QlineEdit"""
         while cursor.position() != 0:
             cursor.movePosition(cursor.Up)
             linenumber += 1
@@ -42,8 +55,6 @@ class PointWindow(QtWidgets.QWidget, QT_Gui.listbox.Ui_Form):
             a_warning.setText("Cant delete from empty list!")
             a_warning.exec()
         self.update_text()
-
-        # print(self.textEdit.cursor().pos().y())
 
     def savepoints(self):
         try:
@@ -77,6 +88,7 @@ class PointWindow(QtWidgets.QWidget, QT_Gui.listbox.Ui_Form):
             self.delete_entry()
 
     def update_text(self):
+        """ each time the update text is called, the entire block is redrawn."""
         self.textEdit.setText("")
         for element in self.clicklist[self.image_number]:
             self.textEdit.append(f"x = {element[0]}, y = {element[1]}, b = {element[2]}")
@@ -87,21 +99,24 @@ class PointWindow(QtWidgets.QWidget, QT_Gui.listbox.Ui_Form):
                                                                                -20:])
 
     def click(self, event: QtGui.QMouseEvent):
-        # left or right?
-        if event.button() == 1:
-            brightness = self.scrollclass.nparray[int(self.rescaled_y),int(self.rescaled_x)]
+        """"kinda vague but trust me that self.rescaled_x is updated through the custom mousemove_event
+         (in image_labeler) and you can see the update in this class ... 💀💀💀"""
+        if event.button() == 1:  # if left click
+            brightness = self.scrollclass.nparray[int(self.rescaled_y), int(self.rescaled_x)]
             self.clicklist[self.image_number].append((self.rescaled_x, self.rescaled_y, brightness))
-            self.clicklist[self.image_number] = sorted(self.clicklist[self.image_number],key=lambda x: x[1])
+            self.clicklist[self.image_number] = sorted(self.clicklist[self.image_number], key=lambda x: x[1])
         self.update_text()
 
     def update_coords(self):
         self.lineEdit.setText(str(self.rescaled_x))
         self.lineEdit_2.setText(str(self.rescaled_y))
         try:
-            brightness = self.scrollclass.nparray[int(self.rescaled_y),int(self.rescaled_x)]
+            brightness = self.scrollclass.nparray[int(self.rescaled_y), int(self.rescaled_x)]
             self.label_8.setText(str(brightness))
         except IndexError:
             self.label_8.setText("")
+
+    # it is not 30, but 10.
     def go_30_forward(self):
         for ii in range(10):
             self.next_image()
@@ -192,7 +207,7 @@ class ScrollClass:
         if self.ctrl_pressed or (override is True):
             if ch_s == 0:
                 pass
-            elif ch_s == 42069:
+            elif ch_s == 42069:  # arbitrarily high value to recognize imchange
                 self.sizevar += 0
             elif ch_s > 0:
                 self.sizevar += 0.5

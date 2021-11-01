@@ -3,7 +3,7 @@ import math
 import pickle
 import os
 import scipy.stats as stats
-
+import matplotlib
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
@@ -184,7 +184,7 @@ def generate_data(trial_num, plotting,video):
             newframe.append((coordinate[0] + offset[0], coordinate[1] + offset[1]))
         measured_noff.append(newframe)
 
-    big_ass = []  # contains all the assigned points
+    big_ass = []  # contains all the [ass]igned points
     big_noass = []  # contains the missed points
     big_faulty = []  # contains the faulty points
 
@@ -200,15 +200,15 @@ def generate_data(trial_num, plotting,video):
         big_noass.append(noass)
         big_faulty.append(faulty)
 
-        for element in ass:
+        for element in ass:  # assigned
             cv2.circle(image, element.coord, 3, green)
-        for element in noass:
+        for element in noass:  # not assigned
             cv2.circle(image, element.coord, 3, yellow)
-        for element in faulty:
+        for element in faulty:  # incorrect guess
             cv2.circle(image, element, 3, red)
 
         if video is True:
-            cv2.imshow('hi', image)
+            cv2.imshow('visualizer', image)
             cv2.waitKey(0)
 
     # generate the end plots
@@ -229,14 +229,39 @@ def generate_data(trial_num, plotting,video):
         pvar3.append(len(faulty))
         pvar4.append(len(tr))
 
+    perc1 = []  # percentage true points hit
+    perc2 = []  # percentage mislabeled
+    for cp, fp, tp in zip(pvar1,pvar3,pvar4):
+        perc1.append(cp/tp)  # percentage of points labeled
+        try:
+            perc2.append(fp/(cp+fp))  # percentage of points incorrectly labeled
+        except ZeroDivisionError:
+            print("you tried to divide by zero. This happens when there are no detected"
+                  "points and no fault points. If you expect this, no worries.")
+
+    perc1 = (sum(perc1)/len(perc1))*100
+    perc2 = (sum(perc2) / len(perc2))*100
+
+    print(f"percentage true points hit = {perc1}")
+    print(f"percentage mislabeled = {perc2}")
+
     i = range(len(pvar1))
-    plt.plot(i, pvar1)
-    plt.plot(i, pvar2)
-    plt.plot(i, pvar3)
-    plt.plot(i, pvar4)
-    plt.legend(['assigned', 'avg distance', 'total faults', 'true points'])
+    plt.plot(i, pvar1, 'b')  # number of assigned points
+    plt.plot(i, pvar2, 'k')  # average distance between true and measured
+    plt.plot(i, pvar3, 'r')  # number of fault points
+    plt.plot(i, pvar4, 'g')  # number of true points
+
+    #plt.legend(['assigned', 'avg distance', 'total faults', 'true points'])
+    #plt.xlabel("frame", fontsize=18)
+
+    figpath = f"./data/plots/plot_{trial_num}.png"
+    plt.savefig(figpath)
+
+
     if plotting is True:
         plt.show()
+
+    plt.close()
 
     # print(pvar2)
     import statistics
@@ -246,8 +271,12 @@ def generate_data(trial_num, plotting,video):
 
 if __name__ == "__main__":
     # res is average error
-    mean1, sd1, res1 = generate_data(31,plotting=True,video=False)
-    mean2, sd2, res2, = generate_data(32, plotting=True, video=False)
+    matplotlib.rcParams.update({'font.size': 22})
+
+    plotit = False
+
+    mean1, sd1, res1 = generate_data(31,plotting=plotit,video=False)
+    mean2, sd2, res2, = generate_data(32, plotting=plotit, video=False)
 
     print(f"Standard deviation run31: {sd1}, mean: {mean1}")
     print(f"Standard deviation run32: {sd2}, mean: {mean2}")
@@ -273,9 +302,10 @@ if __name__ == "__main__":
     print(f"t-test value of run31 & run32: {ttest1}")
 
     ####################################################################################
+    print("\n \n \n")
 
-    mean1, sd1, res1 = generate_data(0,plotting=True,video=False)
-    mean2, sd2, res2, = generate_data(1, plotting=True, video=False)
+    mean1, sd1, res1 = generate_data(0,plotting=plotit,video=False)
+    mean2, sd2, res2, = generate_data(1, plotting=plotit, video=False)
 
     print(f"Standard deviation run0: {sd1}, mean: {mean1}")
     print(f"Standard deviation run1: {sd2}, mean: {mean2}")

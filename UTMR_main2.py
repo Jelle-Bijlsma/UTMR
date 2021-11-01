@@ -36,7 +36,6 @@ from functions.process import change_qpix as cqpx
 
 class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
     def __init__(self, parent=None):
-
         """"
         During testing, set this
         """
@@ -547,7 +546,7 @@ class BuildUp(QtWidgets.QMainWindow, gui_full.Ui_MainWindow):
             """
             self.kp.append([output[2]])
             if self.CurMov.maxframes == self.CurMov.frame_number:
-                file = open('./data/measured_mri1.pcl','wb')
+                file = open('./data/    measured_mri1.pcl','wb')
                 pickle.dump((self.kp,self.internal_dict['crop']),file)
                 file.close()
                 print("written file")

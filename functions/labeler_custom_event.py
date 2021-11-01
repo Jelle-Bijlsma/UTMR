@@ -54,7 +54,8 @@ def keyReleaseEvent(self, event: QtGui.QKeyEvent) -> None:
     super(QtWidgets.QScrollArea, self.scrollArea).keyReleaseEvent(event)
 
 """"
-Mouse tracking is on, meaning 
+Mouse tracking is on, meaning every time the mouse is moved over the label, a signal
+is emitted. 
 """
 def mouseMoveEvent(self, event: QtGui.QMouseEvent):
     x, y = self.ScrCls.labelsize  # ORIGINAL

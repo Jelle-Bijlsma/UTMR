@@ -1,7 +1,6 @@
 import cv2
 from PyQt5 import QtWidgets
 import QT_Gui.image_labeler
-import QT_Gui.listbox
 import sys
 
 from functions.process import change_qpix as cqpx
@@ -66,12 +65,14 @@ class MainWindowz(QtWidgets.QMainWindow, QT_Gui.image_labeler.Ui_MainWindow):
 
 
     def create_ting(self, mainwin, scrollclass):
+        """"This function creates the secondary window, but only the frame. The pointwindow
+        Is responsible for filling it in. """
         w = mainwin.width()
         self.Kp_Window = QtWidgets.QWidget()
         self.Kp_Window.show()
-        self.Kp_Window.move(w + 200, 125)
+        self.Kp_Window.move(w + 200, 125)  # offset so they dont overlap.
         # 'ui' is the class which can interact.
-        self.PtWin = PointWindow(self.Kp_Window, scrollclass, self.label_2)
+        self.PtWin = PointWindow(self.Kp_Window, scrollclass, self.label_2)  # label_2 is from the GUI
 
 
 if __name__ == "__main__":

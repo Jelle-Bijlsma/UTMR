@@ -3,10 +3,15 @@ import math
 import pickle
 import os
 import scipy.stats as stats
-import matplotlib
+
 import cv2
 import numpy as np
 from matplotlib import pyplot as plt
+from matplotlib import rc
+
+font = {'size'   : 15}
+
+rc('font', **font)
 
 """"
 This function compares the 'measured results' which are obtained by the program, with the 'true results' which are
@@ -140,7 +145,7 @@ def load_pngs(png_path):
         images.append(cv2.imread(fp, 1))
     return images
 
-def generate_data(trial_num, plotting,video):
+def generate_data(trial_num, plotting,video,pixelsize):
     green = (0, 255, 0)  # correctly assessed
     yellow = (0, 255, 255)  # missed
     red = (0, 0, 255)  # not a real point
@@ -184,7 +189,7 @@ def generate_data(trial_num, plotting,video):
             newframe.append((coordinate[0] + offset[0], coordinate[1] + offset[1]))
         measured_noff.append(newframe)
 
-    big_ass = []  # contains all the [ass]igned points
+    big_ass = []  # contains all the assigned points
     big_noass = []  # contains the missed points
     big_faulty = []  # contains the faulty points
 
@@ -200,15 +205,15 @@ def generate_data(trial_num, plotting,video):
         big_noass.append(noass)
         big_faulty.append(faulty)
 
-        for element in ass:  # assigned
+        for element in ass:
             cv2.circle(image, element.coord, 3, green)
-        for element in noass:  # not assigned
+        for element in noass:
             cv2.circle(image, element.coord, 3, yellow)
-        for element in faulty:  # incorrect guess
+        for element in faulty:
             cv2.circle(image, element, 3, red)
 
         if video is True:
-            cv2.imshow('visualizer', image)
+            cv2.imshow('hi', image)
             cv2.waitKey(0)
 
     # generate the end plots
@@ -216,6 +221,7 @@ def generate_data(trial_num, plotting,video):
     pvar2 = []  # average error
     pvar3 = []  # number of faulty points
     pvar4 = []  # number of true points
+    pvar_ex = []
 
     for ba, faulty, tr in zip(big_ass, big_faulty, truecoordlist):
         pvar1.append(len(ba))
@@ -223,8 +229,10 @@ def generate_data(trial_num, plotting,video):
         for element in ba:
             total += element.distance
         if len(ba) != 0:
-            pvar2.append(total / len(ba))
+            pvar2.append(total / len(ba)*pixelsize)
+            pvar_ex.append(total / len(ba))
         else:
+            pvar_ex.append(0)
             pvar2.append(0)
         pvar3.append(len(faulty))
         pvar4.append(len(tr))
@@ -246,37 +254,28 @@ def generate_data(trial_num, plotting,video):
     print(f"percentage mislabeled = {perc2}")
 
     i = range(len(pvar1))
-    plt.plot(i, pvar1, 'b')  # number of assigned points
-    plt.plot(i, pvar2, 'k')  # average distance between true and measured
-    plt.plot(i, pvar3, 'r')  # number of fault points
-    plt.plot(i, pvar4, 'g')  # number of true points
-
+    plt.plot(i, pvar1,'b')
+    plt.plot(i, pvar2,'k')
+    plt.plot(i, pvar3,'r')
+    plt.plot(i, pvar4,'g')
+    plt.xlabel('Frame')
+    plt.ylabel('mm (Black) unitless (Red Green Blue)')
     #plt.legend(['assigned', 'avg distance', 'total faults', 'true points'])
-    #plt.xlabel("frame", fontsize=18)
-
-    figpath = f"./data/plots/plot_{trial_num}.png"
-    plt.savefig(figpath)
-
+    plt.savefig(f'./data/run{trial_num}_results.png')
 
     if plotting is True:
         plt.show()
-
-    plt.close()
 
     # print(pvar2)
     import statistics
     da_mean = statistics.mean(pvar2)
     da_sd = statistics.stdev(pvar2)
-    return da_mean,da_sd, pvar2
+    return da_mean,da_sd, pvar2, pvar_ex
 
 if __name__ == "__main__":
     # res is average error
-    matplotlib.rcParams.update({'font.size': 22})
-
-    plotit = False
-
-    mean1, sd1, res1 = generate_data(31,plotting=plotit,video=False)
-    mean2, sd2, res2, = generate_data(32, plotting=plotit, video=False)
+    mean1, sd1, res1, resp1 = generate_data(31,plotting=True,video=False,pixelsize=1.25)
+    mean2, sd2, res2, resp2 = generate_data(32, plotting=True, video=False,pixelsize=1.25)
 
     print(f"Standard deviation run31: {sd1}, mean: {mean1}")
     print(f"Standard deviation run32: {sd2}, mean: {mean2}")
@@ -292,8 +291,8 @@ if __name__ == "__main__":
     print(f"RMSQ of run31: {rmsq1}, MAE: {mae1}")
     print(f"RMSQ of run32: {rmsq2}, MAE: {mae2}")
 
-    swq1 = stats.shapiro(res1)
-    swq2 = stats.shapiro(res2)
+    swq1 = stats.shapiro(resp1)
+    swq2 = stats.shapiro(resp2)
 
     print(f"Shapiro Wilkes of run31: {swq1}")
     print(f"Shapiro Wilkes of run32: {swq2}")
@@ -302,10 +301,11 @@ if __name__ == "__main__":
     print(f"t-test value of run31 & run32: {ttest1}")
 
     ####################################################################################
+
     print("\n \n \n")
 
-    mean1, sd1, res1 = generate_data(0,plotting=plotit,video=False)
-    mean2, sd2, res2, = generate_data(1, plotting=plotit, video=False)
+    mean1, sd1, res1, resp1 = generate_data(0,plotting=True,video=False,pixelsize=1.3462)
+    mean2, sd2, res2, resp2 = generate_data(1, plotting=True, video=False,pixelsize=1.3462)
 
     print(f"Standard deviation run0: {sd1}, mean: {mean1}")
     print(f"Standard deviation run1: {sd2}, mean: {mean2}")
@@ -322,8 +322,8 @@ if __name__ == "__main__":
     print(f"RMSQ of run0: {rmsq1}, MAE: {mae1}")
     print(f"RMSQ of run1: {rmsq2}, MAE: {mae2}")
 
-    swq1 = stats.shapiro(res1)
-    swq2 = stats.shapiro(res2)
+    swq1 = stats.shapiro(resp1)
+    swq2 = stats.shapiro(resp2)
 
     print(f"Shapiro Wilkes of run0: {swq1}")
     print(f"Shapiro Wilkes of run1: {swq2}")

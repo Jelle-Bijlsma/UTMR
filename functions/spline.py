@@ -211,6 +211,9 @@ def dist_determine(point,mask):
               tuple, tuple, tuple]
 
     for r in range(1,100):  # r for radius
+
+        # FUNCTION CALLS ARE SLOW! WE DONT DO THAT HERE.
+
         sq = int(val1 * r)
         h = int(val2 * r)
         # quadrant 1

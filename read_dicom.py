@@ -12,11 +12,22 @@ scan3 = "./data/dicom/ABDOMEN_LIBRARY_20210902_132126_886000/TF2D_RT_1SLICE_NONT
 scan4 = "./data/dicom/ABDOMEN_LIBRARY_20210902_132126_886000/TF2D_RT_1SLICE_NONTRIG_0033/" \
        "RLI_JB_RAM_CATH_TRACKING.MR.ABDOMEN_LIBRARY.0033.0001.2021.09.02.15.32.11.998847.16897977.IMA"
 
-ds = pydicom.dcmread(scan4)
+ds = pydicom.dcmread(scan1)
 
 print(ds)
 
-""""
+"""" SCAN 1
+ (0018, 0020) Scanning Sequence                   CS: 'GR'
+(0018, 0050) Slice Thickness                     DS: '8.0'
+(0018, 0080) Repetition Time                     DS: '45.0'
+(0018, 0081) Echo Time                           DS: '1.26'
+(0018, 1314) Flip Angle                          DS: '67.0'
+(0028, 0030) Pixel Spacing                       DS: [1.25, 1.25]
+(0051, 100c) [Unknown]                           LO: 'FoV 165*240'
+"""
+
+
+"""" SCAN 4
 (0018, 0020)    Scanning Sequence:      Gradient Recalled
 (0018, 0050)    Slice Thickness:        20mm
 (0018, 0080)    Repetition Time:        216.84ms 
